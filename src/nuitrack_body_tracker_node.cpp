@@ -48,7 +48,7 @@
 
 // If Camera mounted on Pan/Tilt head
 //#include "sensor_msgs/JointState.h"
-#include "dynamixel_msgs/JointState.h"
+//#include "dynamixel_msgs/JointState.h"
 
 //For Nuitrack SDK
 #include "nuitrack/Nuitrack.h"
