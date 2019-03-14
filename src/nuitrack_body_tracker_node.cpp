@@ -319,7 +319,7 @@ namespace nuitrack_body_tracker
         person_data.gender = 0;
         person_data.name = "";
 
-        //if(skeleton.id != last_id_)
+        if(skeleton.id != last_id_)
         {
           ROS_INFO("%s: detected person ID %d", _name.c_str(), skeleton.id);
           last_id_ = skeleton.id;
@@ -344,12 +344,12 @@ namespace nuitrack_body_tracker
         person_data.position2d.z = skeleton.joints[KEY_JOINT_TO_TRACK].proj.z / 1000.0;
 
         
-        std::cout << std::setprecision(4) << std::setw(7) 
-          << "Nuitrack: " << "2D Tracking"  
-          << " x: " << track2d.x 
-          << " y: " << track2d.y
-          << " ID: " << track2d.theta
-          << std::endl;
+        // std::cout << std::setprecision(4) << std::setw(7) 
+        //   << "Nuitrack: " << "2D Tracking"  
+        //   << " x: " << track2d.x 
+        //   << " y: " << track2d.y
+        //   << " ID: " << track2d.theta
+        //   << std::endl;
 
 
 
@@ -361,155 +361,155 @@ namespace nuitrack_body_tracker
         //std::cout << face_info; //This will print the entire json object.
         // Good examples at: http://zenol.fr/blog/boost-property-tree/en.html
 
-        try
-        {
-          std::stringstream ss;
-          ss << face_info;
-          boost::property_tree::ptree root;
-          boost::property_tree::read_json(ss, root);
+        // try
+        // {
+        //   std::stringstream ss;
+        //   ss << face_info;
+        //   boost::property_tree::ptree root;
+        //   boost::property_tree::read_json(ss, root);
 
-          // Find all instances of objects (usually people)
-          for(boost::property_tree::ptree::value_type &instance : root.get_child("Instances"))
-          {
-            std::string json_id_str = "";
-            std::string json_class_str = "";
-            int json_id = -1;
+        //   // Find all instances of objects (usually people)
+        //   for(boost::property_tree::ptree::value_type &instance : root.get_child("Instances"))
+        //   {
+        //     std::string json_id_str = "";
+        //     std::string json_class_str = "";
+        //     int json_id = -1;
 
-            for (boost::property_tree::ptree::value_type &found_object : instance.second)
-            {
+        //     for (boost::property_tree::ptree::value_type &found_object : instance.second)
+        //     {
 
-              if( "id" == found_object.first)
-              {
-                json_id_str = found_object.second.data();
-                json_id = found_object.second.get_value<int>();
-                std::cout << "FIELD: id = " << json_id_str << " = " << json_id << std::endl;
+        //       if( "id" == found_object.first)
+        //       {
+        //         json_id_str = found_object.second.data();
+        //         json_id = found_object.second.get_value<int>();
+        //         std::cout << "FIELD: id = " << json_id_str << " = " << json_id << std::endl;
 
-              }
-              else if( "class" == found_object.first)
-              {
-                std::cout << "FIELD: class = " << found_object.second.data() << std::endl;
-                json_class_str = found_object.second.data();
+        //       }
+        //       else if( "class" == found_object.first)
+        //       {
+        //         std::cout << "FIELD: class = " << found_object.second.data() << std::endl;
+        //         json_class_str = found_object.second.data();
 
-              }
-              else if( "face" == found_object.first)
-              {
+        //       }
+        //       else if( "face" == found_object.first)
+        //       {
 
-                // See if we found a face ID that matches current skeleton
-                //if( (json_class_str == "human") && (json_id_str != "") )
-                if( !( (json_class_str == "human") && (json_id == skeleton.id) ))
-                {
-                  std::cout << "FACE ID (" << json_id << ") DOES NOT MATCH SKELETON (" <<
-                    skeleton.id << ")... SKIPPING  (or object != Human?)" << std::endl;
-                }
-                else
-                {
+        //         // See if we found a face ID that matches current skeleton
+        //         //if( (json_class_str == "human") && (json_id_str != "") )
+        //         if( !( (json_class_str == "human") && (json_id == skeleton.id) ))
+        //         {
+        //           std::cout << "FACE ID (" << json_id << ") DOES NOT MATCH SKELETON (" <<
+        //             skeleton.id << ")... SKIPPING  (or object != Human?)" << std::endl;
+        //         }
+        //         else
+        //         {
 
-                  boost::property_tree::ptree face = found_object.second; // subtree
-                  if(face.empty()) 
-                  {
-                    std::cout << "Face tree is empty!" << std::endl;
-                  }
-                  else
-                  {
-                    // this is a face subtree
-                    std::cout << "FACE FOUND " << std::endl;
-                    person_data.face_found = true;
-                    float face_left, face_top, face_width, face_height;
-                    face_left = face_top = face_width = face_height = 0.0;
+        //           boost::property_tree::ptree face = found_object.second; // subtree
+        //           if(face.empty()) 
+        //           {
+        //             std::cout << "Face tree is empty!" << std::endl;
+        //           }
+        //           else
+        //           {
+        //             // this is a face subtree
+        //             std::cout << "FACE FOUND " << std::endl;
+        //             person_data.face_found = true;
+        //             float face_left, face_top, face_width, face_height;
+        //             face_left = face_top = face_width = face_height = 0.0;
 
-                    for(boost::property_tree::ptree::value_type &rectangle : face.get_child("rectangle"))
-                    {
-                      // Face bounding box from 0.0 -> 1.0 (from top left of image) 
-                      // convert to pixel position before publishing              
-                      std::string rec_name = rectangle.first;
-                      std::string rec_val = rectangle.second.data();
-                      //std::cout << "FACE RECTANGLE: " << rec_name << " : " << rec_val << std::endl;
+        //             for(boost::property_tree::ptree::value_type &rectangle : face.get_child("rectangle"))
+        //             {
+        //               // Face bounding box from 0.0 -> 1.0 (from top left of image) 
+        //               // convert to pixel position before publishing              
+        //               std::string rec_name = rectangle.first;
+        //               std::string rec_val = rectangle.second.data();
+        //               //std::cout << "FACE RECTANGLE: " << rec_name << " : " << rec_val << std::endl;
                       
-                      if( rectangle.first == "left")
-                      {
-                        face_left = rectangle.second.get_value<float>();
-                        person_data.face_left = (int)((float)frame_width_ * face_left);
-                      }                      
-                      if( rectangle.first == "top")
-                      {
-                        face_top = rectangle.second.get_value<float>();
-                        person_data.face_top = (int)((float)frame_height_ * face_top);
-                      }                      
-                      if( rectangle.first == "width")
-                      {
-                        face_width = rectangle.second.get_value<float>();
-                        person_data.face_width = (int)((float)frame_width_ * face_width);
-                      }                      
-                      if( rectangle.first == "height")
-                      {
-                        face_height = rectangle.second.get_value<float>();
-                        person_data.face_height = (int)((float)frame_height_ * face_height);
-                      }                      
-                    }
+        //               if( rectangle.first == "left")
+        //               {
+        //                 face_left = rectangle.second.get_value<float>();
+        //                 person_data.face_left = (int)((float)frame_width_ * face_left);
+        //               }                      
+        //               if( rectangle.first == "top")
+        //               {
+        //                 face_top = rectangle.second.get_value<float>();
+        //                 person_data.face_top = (int)((float)frame_height_ * face_top);
+        //               }                      
+        //               if( rectangle.first == "width")
+        //               {
+        //                 face_width = rectangle.second.get_value<float>();
+        //                 person_data.face_width = (int)((float)frame_width_ * face_width);
+        //               }                      
+        //               if( rectangle.first == "height")
+        //               {
+        //                 face_height = rectangle.second.get_value<float>();
+        //                 person_data.face_height = (int)((float)frame_height_ * face_height);
+        //               }                      
+        //             }
                     
-                    // Get center of the face bounding box and convert projection to radians
-                    // proj is 0.0 (left) --> 1.0 (right)
+        //             // Get center of the face bounding box and convert projection to radians
+        //             // proj is 0.0 (left) --> 1.0 (right)
                     
-                    float face_center_proj_x = face_left + (face_width / 2.0);
-                    float face_center_proj_y = face_top + (face_height / 2.0);
-                    person_data.face_center.x = (face_center_proj_x - 0.5) * ASTRA_MINI_FOV_X;
-                    person_data.face_center.y =  (face_center_proj_y - 0.5) * ASTRA_MINI_FOV_Y;
-                    // just use the skeleton location 
-                    person_data.face_center.z = skeleton.joints[JOINT_HEAD].real.z / 1000.0;
+        //             float face_center_proj_x = face_left + (face_width / 2.0);
+        //             float face_center_proj_y = face_top + (face_height / 2.0);
+        //             person_data.face_center.x = (face_center_proj_x - 0.5) * ASTRA_MINI_FOV_X;
+        //             person_data.face_center.y =  (face_center_proj_y - 0.5) * ASTRA_MINI_FOV_Y;
+        //             // just use the skeleton location 
+        //             person_data.face_center.z = skeleton.joints[JOINT_HEAD].real.z / 1000.0;
                     
-                    //std::cout << "DBG face_center_proj = " << face_center_proj_x << ", " <<
-                    //  face_center_proj_y << std::endl;
+        //             //std::cout << "DBG face_center_proj = " << face_center_proj_x << ", " <<
+        //             //  face_center_proj_y << std::endl;
                       
-                    //std::cout << "DBG face_center_ROS = " << person_data.face_center.x << ", " <<
-                    //  person_data.face_center.y << std::endl;
+        //             //std::cout << "DBG face_center_ROS = " << person_data.face_center.x << ", " <<
+        //             //  person_data.face_center.y << std::endl;
 
                     
                     
-                    for(boost::property_tree::ptree::value_type &angles : face.get_child("angles"))
-                    {
-                      // Face Angle (where the face is pointing)
-                      std::string angles_key = angles.first;
-                      std::string angles_val = angles.second.data();
-                      //std::cout << "FACE ANGLES: " << angles_key << " : " << angles_val << std::endl;
-                      // Not currently published for ROS (future)
+        //             for(boost::property_tree::ptree::value_type &angles : face.get_child("angles"))
+        //             {
+        //               // Face Angle (where the face is pointing)
+        //               std::string angles_key = angles.first;
+        //               std::string angles_val = angles.second.data();
+        //               //std::cout << "FACE ANGLES: " << angles_key << " : " << angles_val << std::endl;
+        //               // Not currently published for ROS (future)
 
-                    }
-                    for(boost::property_tree::ptree::value_type &age : face.get_child("age"))
-                    {
-                      // rectangle is set of std::pair
-                      std::string age_key = age.first;
-                      std::string age_val = age.second.data();
-                      std::cout << "FACE AGE: " << age_key << " : " << age_val << std::endl;
+        //             }
+        //             for(boost::property_tree::ptree::value_type &age : face.get_child("age"))
+        //             {
+        //               // rectangle is set of std::pair
+        //               std::string age_key = age.first;
+        //               std::string age_val = age.second.data();
+        //               std::cout << "FACE AGE: " << age_key << " : " << age_val << std::endl;
                       
-                      if( age.first == "years")
-                      {
-                        float float_age = age.second.get_value<float>();
-                        person_data.age = (int)float_age;
-                      }                      
+        //               if( age.first == "years")
+        //               {
+        //                 float float_age = age.second.get_value<float>();
+        //                 person_data.age = (int)float_age;
+        //               }                      
 
-                    }
+        //             }
 
-                    std::string gender_val = face.get<std::string>("gender");
-                    std::cout << "GENDER: " << gender_val << std::endl;
-                    if("male" == gender_val)
-                    {
-                      person_data.gender = 1;
-                    }
-                    else if("female" == gender_val)
-                    {
-                      person_data.gender = 2;
-                    }
+        //             std::string gender_val = face.get<std::string>("gender");
+        //             std::cout << "GENDER: " << gender_val << std::endl;
+        //             if("male" == gender_val)
+        //             {
+        //               person_data.gender = 1;
+        //             }
+        //             else if("female" == gender_val)
+        //             {
+        //               person_data.gender = 2;
+        //             }
 
-                  }
-                }
-              }
-            }
-          }
-        }
-        catch (std::exception const& e)
-        {
-          std::cerr << e.what() << std::endl;
-        }
+        //           }
+        //         }
+        //       }
+        //     }
+        //   }
+        // }
+        // catch (std::exception const& e)
+        // {
+        //   std::cerr << e.what() << std::endl;
+        // }
 
 
         ///////////////////////////////////////////////////////////////
@@ -529,50 +529,437 @@ namespace nuitrack_body_tracker
         person_data.position3d.y = skeleton.joints[KEY_JOINT_TO_TRACK].real.x / 1000.0;
         person_data.position3d.z = skeleton.joints[KEY_JOINT_TO_TRACK].real.y / 1000.0;
  
-       
-        skeleton_data.joint_position_head.x = skeleton.joints[JOINT_HEAD].real.z / 1000.0;
-        skeleton_data.joint_position_head.y = skeleton.joints[JOINT_HEAD].real.x / 1000.0;
-        skeleton_data.joint_position_head.z = skeleton.joints[JOINT_HEAD].real.y / 1000.0;
+        float conf = 0.6;
+        
+        if(skeleton.joints[JOINT_HEAD].confidence > conf){
+        skeleton_data.joint_position_head_real.x = skeleton.joints[JOINT_HEAD].real.z / 1000.0;
+        skeleton_data.joint_position_head_real.y = skeleton.joints[JOINT_HEAD].real.x / 1000.0;
+        skeleton_data.joint_position_head_real.z = skeleton.joints[JOINT_HEAD].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_head_real.x = -9999;
+        skeleton_data.joint_position_head_real.y = -9999;
+        skeleton_data.joint_position_head_real.z = -9999;
+        }
 
-        skeleton_data.joint_position_neck.x = skeleton.joints[JOINT_NECK].real.z / 1000.0;
-        skeleton_data.joint_position_neck.y = skeleton.joints[JOINT_NECK].real.x / 1000.0;
-        skeleton_data.joint_position_neck.z = skeleton.joints[JOINT_NECK].real.y / 1000.0;
+        if(skeleton.joints[JOINT_NECK].confidence > conf){
+        skeleton_data.joint_position_neck_real.x = skeleton.joints[JOINT_NECK].real.z / 1000.0;
+        skeleton_data.joint_position_neck_real.y = skeleton.joints[JOINT_NECK].real.x / 1000.0;
+        skeleton_data.joint_position_neck_real.z = skeleton.joints[JOINT_NECK].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_neck_real.x = -9999;
+        skeleton_data.joint_position_neck_real.y = -9999;
+        skeleton_data.joint_position_neck_real.z = -9999;
+        }
 
-        skeleton_data.joint_position_spine_top.x = skeleton.joints[JOINT_TORSO].real.z / 1000.0;
-        skeleton_data.joint_position_spine_top.y = skeleton.joints[JOINT_TORSO].real.x / 1000.0;
-        skeleton_data.joint_position_spine_top.z = skeleton.joints[JOINT_TORSO].real.y / 1000.0;
+        if(skeleton.joints[JOINT_LEFT_COLLAR].confidence > conf){
+        skeleton_data.joint_position_left_collar_real.x = skeleton.joints[JOINT_LEFT_COLLAR].real.z / 1000.0;
+        skeleton_data.joint_position_left_collar_real.y = skeleton.joints[JOINT_LEFT_COLLAR].real.x / 1000.0;
+        skeleton_data.joint_position_left_collar_real.z = skeleton.joints[JOINT_LEFT_COLLAR].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_left_collar_real.x = -9999;
+        skeleton_data.joint_position_left_collar_real.y = -9999;
+        skeleton_data.joint_position_left_collar_real.z = -9999;
+        }
 
-        skeleton_data.joint_position_spine_mid.x = skeleton.joints[JOINT_WAIST].real.z / 1000.0;
-        skeleton_data.joint_position_spine_mid.y = skeleton.joints[JOINT_WAIST].real.x / 1000.0;
-        skeleton_data.joint_position_spine_mid.z = skeleton.joints[JOINT_WAIST].real.y / 1000.0;
+        if(skeleton.joints[JOINT_TORSO].confidence > conf){
+        skeleton_data.joint_position_torso_real.x = skeleton.joints[JOINT_TORSO].real.z / 1000.0;
+        skeleton_data.joint_position_torso_real.y = skeleton.joints[JOINT_TORSO].real.x / 1000.0;
+        skeleton_data.joint_position_torso_real.z = skeleton.joints[JOINT_TORSO].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_torso_real.x = -9999;
+        skeleton_data.joint_position_torso_real.y = -9999;
+        skeleton_data.joint_position_torso_real.z = -9999;        
+        }
 
-        skeleton_data.joint_position_spine_bottom.x = 0.0;
-        skeleton_data.joint_position_spine_bottom.y = 0.0;
-        skeleton_data.joint_position_spine_bottom.z = 0.0;
+        if(skeleton.joints[JOINT_WAIST].confidence > conf){
+        skeleton_data.joint_position_waist_real.x = skeleton.joints[JOINT_WAIST].real.z / 1000.0;
+        skeleton_data.joint_position_waist_real.y = skeleton.joints[JOINT_WAIST].real.x / 1000.0;
+        skeleton_data.joint_position_waist_real.z = skeleton.joints[JOINT_WAIST].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_waist_real.x = -9999;
+        skeleton_data.joint_position_waist_real.y = -9999;
+        skeleton_data.joint_position_waist_real.z = -9999;          
+        }
 
-        skeleton_data.joint_position_left_shoulder.x = skeleton.joints[JOINT_LEFT_SHOULDER].real.z / 1000.0;
-        skeleton_data.joint_position_left_shoulder.y = skeleton.joints[JOINT_LEFT_SHOULDER].real.x / 1000.0;
-        skeleton_data.joint_position_left_shoulder.z = skeleton.joints[JOINT_LEFT_SHOULDER].real.y / 1000.0;
+        if(skeleton.joints[JOINT_LEFT_SHOULDER].confidence > conf){
+        skeleton_data.joint_position_left_shoulder_real.x = skeleton.joints[JOINT_LEFT_SHOULDER].real.z / 1000.0;
+        skeleton_data.joint_position_left_shoulder_real.y = skeleton.joints[JOINT_LEFT_SHOULDER].real.x / 1000.0;
+        skeleton_data.joint_position_left_shoulder_real.z = skeleton.joints[JOINT_LEFT_SHOULDER].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_left_shoulder_real.x = -9999;
+        skeleton_data.joint_position_left_shoulder_real.y = -9999;
+        skeleton_data.joint_position_left_shoulder_real.z = -9999;          
+        }
 
-        skeleton_data.joint_position_left_elbow.x = skeleton.joints[JOINT_LEFT_ELBOW].real.z / 1000.0;
-        skeleton_data.joint_position_left_elbow.y = skeleton.joints[JOINT_LEFT_ELBOW].real.x / 1000.0;
-        skeleton_data.joint_position_left_elbow.z = skeleton.joints[JOINT_LEFT_ELBOW].real.y / 1000.0;
+        if(skeleton.joints[JOINT_LEFT_ELBOW].confidence > conf){
+        skeleton_data.joint_position_left_elbow_real.x = skeleton.joints[JOINT_LEFT_ELBOW].real.z / 1000.0;
+        skeleton_data.joint_position_left_elbow_real.y = skeleton.joints[JOINT_LEFT_ELBOW].real.x / 1000.0;
+        skeleton_data.joint_position_left_elbow_real.z = skeleton.joints[JOINT_LEFT_ELBOW].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_left_elbow_real.x = -9999;
+        skeleton_data.joint_position_left_elbow_real.y = -9999;
+        skeleton_data.joint_position_left_elbow_real.z = -9999;          
+        }
 
-        skeleton_data.joint_position_left_hand.x = skeleton.joints[JOINT_LEFT_HAND].real.z / 1000.0;
-        skeleton_data.joint_position_left_hand.y = skeleton.joints[JOINT_LEFT_HAND].real.x / 1000.0;
-        skeleton_data.joint_position_left_hand.z = skeleton.joints[JOINT_LEFT_HAND].real.y / 1000.0;
+        if(skeleton.joints[JOINT_LEFT_WRIST].confidence > conf){
+        skeleton_data.joint_position_left_wrist_real.x = skeleton.joints[JOINT_LEFT_WRIST].real.z / 1000.0;
+        skeleton_data.joint_position_left_wrist_real.y = skeleton.joints[JOINT_LEFT_WRIST].real.x / 1000.0;
+        skeleton_data.joint_position_left_wrist_real.z = skeleton.joints[JOINT_LEFT_WRIST].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_left_wrist_real.x = -9999;
+        skeleton_data.joint_position_left_wrist_real.y = -9999;
+        skeleton_data.joint_position_left_wrist_real.z = -9999;          
+        }
 
-        skeleton_data.joint_position_right_shoulder.x = skeleton.joints[JOINT_RIGHT_SHOULDER].real.z / 1000.0;
-        skeleton_data.joint_position_right_shoulder.y = skeleton.joints[JOINT_RIGHT_SHOULDER].real.x / 1000.0;
-        skeleton_data.joint_position_right_shoulder.z = skeleton.joints[JOINT_RIGHT_SHOULDER].real.y / 1000.0;
+        if(skeleton.joints[JOINT_LEFT_HAND].confidence > conf){
+        skeleton_data.joint_position_left_hand_real.x = skeleton.joints[JOINT_LEFT_HAND].real.z / 1000.0;
+        skeleton_data.joint_position_left_hand_real.y = skeleton.joints[JOINT_LEFT_HAND].real.x / 1000.0;
+        skeleton_data.joint_position_left_hand_real.z = skeleton.joints[JOINT_LEFT_HAND].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_left_hand_real.x = -9999;
+        skeleton_data.joint_position_left_hand_real.y = -9999;
+        skeleton_data.joint_position_left_hand_real.z = -9999;          
+        }
 
-        skeleton_data.joint_position_right_elbow.x = skeleton.joints[JOINT_RIGHT_ELBOW].real.z / 1000.0;
-        skeleton_data.joint_position_right_elbow.y = skeleton.joints[JOINT_RIGHT_ELBOW].real.x / 1000.0;
-        skeleton_data.joint_position_right_elbow.z = skeleton.joints[JOINT_RIGHT_ELBOW].real.y / 1000.0;
+        if(skeleton.joints[JOINT_RIGHT_SHOULDER].confidence > conf){
+        skeleton_data.joint_position_right_shoulder_real.x = skeleton.joints[JOINT_RIGHT_SHOULDER].real.z / 1000.0;
+        skeleton_data.joint_position_right_shoulder_real.y = skeleton.joints[JOINT_RIGHT_SHOULDER].real.x / 1000.0;
+        skeleton_data.joint_position_right_shoulder_real.z = skeleton.joints[JOINT_RIGHT_SHOULDER].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_right_shoulder_real.x = -9999;
+        skeleton_data.joint_position_right_shoulder_real.y = -9999;
+        skeleton_data.joint_position_right_shoulder_real.z = -9999;          
+        }
 
-        skeleton_data.joint_position_right_hand.x = skeleton.joints[JOINT_RIGHT_HAND].real.z / 1000.0;
-        skeleton_data.joint_position_right_hand.y = skeleton.joints[JOINT_RIGHT_HAND].real.x / 1000.0;
-        skeleton_data.joint_position_right_hand.z = skeleton.joints[JOINT_RIGHT_HAND].real.y / 1000.0;
+        if(skeleton.joints[JOINT_RIGHT_ELBOW].confidence > conf){
+        skeleton_data.joint_position_right_elbow_real.x = skeleton.joints[JOINT_RIGHT_ELBOW].real.z / 1000.0;
+        skeleton_data.joint_position_right_elbow_real.y = skeleton.joints[JOINT_RIGHT_ELBOW].real.x / 1000.0;
+        skeleton_data.joint_position_right_elbow_real.z = skeleton.joints[JOINT_RIGHT_ELBOW].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_right_elbow_real.x = -9999;
+        skeleton_data.joint_position_right_elbow_real.y = -9999;
+        skeleton_data.joint_position_right_elbow_real.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_RIGHT_WRIST].confidence > conf){
+        skeleton_data.joint_position_right_wrist_real.x = skeleton.joints[JOINT_RIGHT_WRIST].real.z / 1000.0;
+        skeleton_data.joint_position_right_wrist_real.y = skeleton.joints[JOINT_RIGHT_WRIST].real.x / 1000.0;
+        skeleton_data.joint_position_right_wrist_real.z = skeleton.joints[JOINT_RIGHT_WRIST].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_right_wrist_real.x = -9999;
+        skeleton_data.joint_position_right_wrist_real.y = -9999;
+        skeleton_data.joint_position_right_wrist_real.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_RIGHT_HAND].confidence > conf){
+        skeleton_data.joint_position_right_hand_real.x = skeleton.joints[JOINT_RIGHT_HAND].real.z / 1000.0;
+        skeleton_data.joint_position_right_hand_real.y = skeleton.joints[JOINT_RIGHT_HAND].real.x / 1000.0;
+        skeleton_data.joint_position_right_hand_real.z = skeleton.joints[JOINT_RIGHT_HAND].real.y / 1000.0;
+        }
+        else{
+        skeleton_data.joint_position_right_hand_real.x = -9999;
+        skeleton_data.joint_position_right_hand_real.y = -9999;
+        skeleton_data.joint_position_right_hand_real.z = -9999;          
+        }
+
+
+
+
+        if(skeleton.joints[JOINT_HEAD].confidence > conf){
+        skeleton_data.joint_position_head_proj.x = skeleton.joints[JOINT_HEAD].proj.x;
+        skeleton_data.joint_position_head_proj.y = skeleton.joints[JOINT_HEAD].proj.y;
+        skeleton_data.joint_position_head_proj.z = skeleton.joints[JOINT_HEAD].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_head_proj.x = -9999;
+        skeleton_data.joint_position_head_proj.y = -9999;
+        skeleton_data.joint_position_head_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_NECK].confidence > conf){
+        skeleton_data.joint_position_neck_proj.x = skeleton.joints[JOINT_NECK].proj.x;
+        skeleton_data.joint_position_neck_proj.y = skeleton.joints[JOINT_NECK].proj.y;
+        skeleton_data.joint_position_neck_proj.z = skeleton.joints[JOINT_NECK].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_neck_proj.x = -9999;
+        skeleton_data.joint_position_neck_proj.y = -9999;
+        skeleton_data.joint_position_neck_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_LEFT_COLLAR].confidence > conf){
+        skeleton_data.joint_position_left_collar_proj.x = skeleton.joints[JOINT_LEFT_COLLAR].proj.x;
+        skeleton_data.joint_position_left_collar_proj.y = skeleton.joints[JOINT_LEFT_COLLAR].proj.y;
+        skeleton_data.joint_position_left_collar_proj.z = skeleton.joints[JOINT_LEFT_COLLAR].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_left_collar_proj.x = -9999;
+        skeleton_data.joint_position_left_collar_proj.y = -9999;
+        skeleton_data.joint_position_left_collar_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_TORSO].confidence > conf){
+        skeleton_data.joint_position_torso_proj.x = skeleton.joints[JOINT_TORSO].proj.x;
+        skeleton_data.joint_position_torso_proj.y = skeleton.joints[JOINT_TORSO].proj.y;
+        skeleton_data.joint_position_torso_proj.z = skeleton.joints[JOINT_TORSO].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_torso_proj.x = -9999;
+        skeleton_data.joint_position_torso_proj.y = -9999;
+        skeleton_data.joint_position_torso_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_WAIST].confidence > conf){
+        skeleton_data.joint_position_waist_proj.x = skeleton.joints[JOINT_WAIST].proj.x;
+        skeleton_data.joint_position_waist_proj.y = skeleton.joints[JOINT_WAIST].proj.y;
+        skeleton_data.joint_position_waist_proj.z = skeleton.joints[JOINT_WAIST].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_waist_proj.x = -9999;
+        skeleton_data.joint_position_waist_proj.y = -9999;
+        skeleton_data.joint_position_waist_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_LEFT_SHOULDER].confidence > conf){
+        skeleton_data.joint_position_left_shoulder_proj.x = skeleton.joints[JOINT_LEFT_SHOULDER].proj.x;
+        skeleton_data.joint_position_left_shoulder_proj.y = skeleton.joints[JOINT_LEFT_SHOULDER].proj.y;
+        skeleton_data.joint_position_left_shoulder_proj.z = skeleton.joints[JOINT_LEFT_SHOULDER].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_left_shoulder_proj.x = -9999;
+        skeleton_data.joint_position_left_shoulder_proj.y = -9999;
+        skeleton_data.joint_position_left_shoulder_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_LEFT_ELBOW].confidence > conf){
+        skeleton_data.joint_position_left_elbow_proj.x = skeleton.joints[JOINT_LEFT_ELBOW].proj.x;
+        skeleton_data.joint_position_left_elbow_proj.y = skeleton.joints[JOINT_LEFT_ELBOW].proj.y;
+        skeleton_data.joint_position_left_elbow_proj.z = skeleton.joints[JOINT_LEFT_ELBOW].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_left_elbow_proj.x = -9999;
+        skeleton_data.joint_position_left_elbow_proj.y = -9999;
+        skeleton_data.joint_position_left_elbow_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_LEFT_WRIST].confidence > conf){
+        skeleton_data.joint_position_left_wrist_proj.x = skeleton.joints[JOINT_LEFT_WRIST].proj.x;
+        skeleton_data.joint_position_left_wrist_proj.y = skeleton.joints[JOINT_LEFT_WRIST].proj.y;
+        skeleton_data.joint_position_left_wrist_proj.z = skeleton.joints[JOINT_LEFT_WRIST].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_left_wrist_proj.x = -9999;
+        skeleton_data.joint_position_left_wrist_proj.y = -9999;
+        skeleton_data.joint_position_left_wrist_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_LEFT_HAND].confidence > conf){
+        skeleton_data.joint_position_left_hand_proj.x = skeleton.joints[JOINT_LEFT_HAND].proj.x;
+        skeleton_data.joint_position_left_hand_proj.y = skeleton.joints[JOINT_LEFT_HAND].proj.y;
+        skeleton_data.joint_position_left_hand_proj.z = skeleton.joints[JOINT_LEFT_HAND].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_left_hand_proj.x = -9999;
+        skeleton_data.joint_position_left_hand_proj.y = -9999;
+        skeleton_data.joint_position_left_hand_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_RIGHT_SHOULDER].confidence > conf){
+        skeleton_data.joint_position_right_shoulder_proj.x = skeleton.joints[JOINT_RIGHT_SHOULDER].proj.x;
+        skeleton_data.joint_position_right_shoulder_proj.y = skeleton.joints[JOINT_RIGHT_SHOULDER].proj.y;
+        skeleton_data.joint_position_right_shoulder_proj.z = skeleton.joints[JOINT_RIGHT_SHOULDER].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_right_shoulder_proj.x = -9999;
+        skeleton_data.joint_position_right_shoulder_proj.y = -9999;
+        skeleton_data.joint_position_right_shoulder_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_RIGHT_ELBOW].confidence > conf){
+        skeleton_data.joint_position_right_elbow_proj.x = skeleton.joints[JOINT_RIGHT_ELBOW].proj.x;
+        skeleton_data.joint_position_right_elbow_proj.y = skeleton.joints[JOINT_RIGHT_ELBOW].proj.y;
+        skeleton_data.joint_position_right_elbow_proj.z = skeleton.joints[JOINT_RIGHT_ELBOW].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_right_elbow_proj.x = -9999;
+        skeleton_data.joint_position_right_elbow_proj.y = -9999;
+        skeleton_data.joint_position_right_elbow_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_RIGHT_WRIST].confidence > conf){
+        skeleton_data.joint_position_right_wrist_proj.x = skeleton.joints[JOINT_RIGHT_WRIST].proj.x;
+        skeleton_data.joint_position_right_wrist_proj.y = skeleton.joints[JOINT_RIGHT_WRIST].proj.y;
+        skeleton_data.joint_position_right_wrist_proj.z = skeleton.joints[JOINT_RIGHT_WRIST].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_right_wrist_proj.x = -9999;
+        skeleton_data.joint_position_right_wrist_proj.y = -9999;
+        skeleton_data.joint_position_right_wrist_proj.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_RIGHT_HAND].confidence > conf){
+        skeleton_data.joint_position_right_hand_proj.x = skeleton.joints[JOINT_RIGHT_HAND].proj.x;
+        skeleton_data.joint_position_right_hand_proj.y = skeleton.joints[JOINT_RIGHT_HAND].proj.y;
+        skeleton_data.joint_position_right_hand_proj.z = skeleton.joints[JOINT_RIGHT_HAND].proj.z;
+        }
+        else{
+        skeleton_data.joint_position_right_hand_proj.x = -9999;
+        skeleton_data.joint_position_right_hand_proj.y = -9999;
+        skeleton_data.joint_position_right_hand_proj.z = -9999;          
+        }
+
+
+
+
+        if(skeleton.joints[JOINT_HEAD].confidence > conf){
+        skeleton_data.joint_orientation1_head.x = skeleton.joints[JOINT_HEAD].orient.matrix[0];
+        skeleton_data.joint_orientation1_head.y = skeleton.joints[JOINT_HEAD].orient.matrix[1];
+        skeleton_data.joint_orientation1_head.z = skeleton.joints[JOINT_HEAD].orient.matrix[2];
+        skeleton_data.joint_orientation2_head.x = skeleton.joints[JOINT_HEAD].orient.matrix[3];
+        skeleton_data.joint_orientation2_head.y = skeleton.joints[JOINT_HEAD].orient.matrix[4];
+        skeleton_data.joint_orientation2_head.z = skeleton.joints[JOINT_HEAD].orient.matrix[5];
+        skeleton_data.joint_orientation3_head.x = skeleton.joints[JOINT_HEAD].orient.matrix[6];
+        skeleton_data.joint_orientation3_head.y = skeleton.joints[JOINT_HEAD].orient.matrix[7];
+        skeleton_data.joint_orientation3_head.z = skeleton.joints[JOINT_HEAD].orient.matrix[8];
+        }
+        else{
+        skeleton_data.joint_orientation1_head.x = -9999;
+        skeleton_data.joint_orientation1_head.y = -9999;
+        skeleton_data.joint_orientation1_head.z = -9999;
+        skeleton_data.joint_orientation2_head.x = -9999;
+        skeleton_data.joint_orientation2_head.y = -9999;
+        skeleton_data.joint_orientation2_head.z = -9999;
+        skeleton_data.joint_orientation3_head.x = -9999;
+        skeleton_data.joint_orientation3_head.y = -9999;
+        skeleton_data.joint_orientation3_head.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_WAIST].confidence > conf){
+        skeleton_data.joint_orientation1_waist.x = skeleton.joints[JOINT_WAIST].orient.matrix[0];
+        skeleton_data.joint_orientation1_waist.y = skeleton.joints[JOINT_WAIST].orient.matrix[1];
+        skeleton_data.joint_orientation1_waist.z = skeleton.joints[JOINT_WAIST].orient.matrix[2];
+        skeleton_data.joint_orientation2_waist.x = skeleton.joints[JOINT_WAIST].orient.matrix[3];
+        skeleton_data.joint_orientation2_waist.y = skeleton.joints[JOINT_WAIST].orient.matrix[4];
+        skeleton_data.joint_orientation2_waist.z = skeleton.joints[JOINT_WAIST].orient.matrix[5];
+        skeleton_data.joint_orientation3_waist.x = skeleton.joints[JOINT_WAIST].orient.matrix[6];
+        skeleton_data.joint_orientation3_waist.y = skeleton.joints[JOINT_WAIST].orient.matrix[7];
+        skeleton_data.joint_orientation3_waist.z = skeleton.joints[JOINT_WAIST].orient.matrix[8];
+        }
+        else{
+        skeleton_data.joint_orientation1_waist.x = -9999;
+        skeleton_data.joint_orientation1_waist.y = -9999;
+        skeleton_data.joint_orientation1_waist.z = -9999;
+        skeleton_data.joint_orientation2_waist.x = -9999;
+        skeleton_data.joint_orientation2_waist.y = -9999;
+        skeleton_data.joint_orientation2_waist.z = -9999;
+        skeleton_data.joint_orientation3_waist.x = -9999;
+        skeleton_data.joint_orientation3_waist.y = -9999;
+        skeleton_data.joint_orientation3_waist.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_LEFT_SHOULDER].confidence > conf){
+        skeleton_data.joint_orientation1_left_shoulder.x = skeleton.joints[JOINT_LEFT_SHOULDER].orient.matrix[0];
+        skeleton_data.joint_orientation1_left_shoulder.y = skeleton.joints[JOINT_LEFT_SHOULDER].orient.matrix[1];
+        skeleton_data.joint_orientation1_left_shoulder.z = skeleton.joints[JOINT_LEFT_SHOULDER].orient.matrix[2];
+        skeleton_data.joint_orientation2_left_shoulder.x = skeleton.joints[JOINT_LEFT_SHOULDER].orient.matrix[3];
+        skeleton_data.joint_orientation2_left_shoulder.y = skeleton.joints[JOINT_LEFT_SHOULDER].orient.matrix[4];
+        skeleton_data.joint_orientation2_left_shoulder.z = skeleton.joints[JOINT_LEFT_SHOULDER].orient.matrix[5];
+        skeleton_data.joint_orientation3_left_shoulder.x = skeleton.joints[JOINT_LEFT_SHOULDER].orient.matrix[6];
+        skeleton_data.joint_orientation3_left_shoulder.y = skeleton.joints[JOINT_LEFT_SHOULDER].orient.matrix[7];
+        skeleton_data.joint_orientation3_left_shoulder.z = skeleton.joints[JOINT_LEFT_SHOULDER].orient.matrix[8];
+        }
+        else{
+        skeleton_data.joint_orientation1_left_shoulder.x = -9999;
+        skeleton_data.joint_orientation1_left_shoulder.y = -9999;
+        skeleton_data.joint_orientation1_left_shoulder.z = -9999;
+        skeleton_data.joint_orientation2_left_shoulder.x = -9999;
+        skeleton_data.joint_orientation2_left_shoulder.y = -9999;
+        skeleton_data.joint_orientation2_left_shoulder.z = -9999;
+        skeleton_data.joint_orientation3_left_shoulder.x = -9999;
+        skeleton_data.joint_orientation3_left_shoulder.y = -9999;
+        skeleton_data.joint_orientation3_left_shoulder.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_LEFT_ELBOW].confidence > conf){
+        skeleton_data.joint_orientation1_left_elbow.x = skeleton.joints[JOINT_LEFT_ELBOW].orient.matrix[0];
+        skeleton_data.joint_orientation1_left_elbow.y = skeleton.joints[JOINT_LEFT_ELBOW].orient.matrix[1];
+        skeleton_data.joint_orientation1_left_elbow.z = skeleton.joints[JOINT_LEFT_ELBOW].orient.matrix[2];
+        skeleton_data.joint_orientation2_left_elbow.x = skeleton.joints[JOINT_LEFT_ELBOW].orient.matrix[3];
+        skeleton_data.joint_orientation2_left_elbow.y = skeleton.joints[JOINT_LEFT_ELBOW].orient.matrix[4];
+        skeleton_data.joint_orientation2_left_elbow.z = skeleton.joints[JOINT_LEFT_ELBOW].orient.matrix[5];
+        skeleton_data.joint_orientation3_left_elbow.x = skeleton.joints[JOINT_LEFT_ELBOW].orient.matrix[6];
+        skeleton_data.joint_orientation3_left_elbow.y = skeleton.joints[JOINT_LEFT_ELBOW].orient.matrix[7];
+        skeleton_data.joint_orientation3_left_elbow.z = skeleton.joints[JOINT_LEFT_ELBOW].orient.matrix[8];
+        }
+        else{
+        skeleton_data.joint_orientation1_left_elbow.x = -9999;
+        skeleton_data.joint_orientation1_left_elbow.y = -9999;
+        skeleton_data.joint_orientation1_left_elbow.z = -9999;
+        skeleton_data.joint_orientation2_left_elbow.x = -9999;
+        skeleton_data.joint_orientation2_left_elbow.y = -9999;
+        skeleton_data.joint_orientation2_left_elbow.z = -9999;
+        skeleton_data.joint_orientation3_left_elbow.x = -9999;
+        skeleton_data.joint_orientation3_left_elbow.y = -9999;
+        skeleton_data.joint_orientation3_left_elbow.z = -9999;          
+        }
+
+        if(skeleton.joints[JOINT_RIGHT_SHOULDER].confidence > conf){
+        skeleton_data.joint_orientation1_right_shoulder.x = skeleton.joints[JOINT_RIGHT_SHOULDER].orient.matrix[0];
+        skeleton_data.joint_orientation1_right_shoulder.y = skeleton.joints[JOINT_RIGHT_SHOULDER].orient.matrix[1];
+        skeleton_data.joint_orientation1_right_shoulder.z = skeleton.joints[JOINT_RIGHT_SHOULDER].orient.matrix[2];
+        skeleton_data.joint_orientation2_right_shoulder.x = skeleton.joints[JOINT_RIGHT_SHOULDER].orient.matrix[3];
+        skeleton_data.joint_orientation2_right_shoulder.y = skeleton.joints[JOINT_RIGHT_SHOULDER].orient.matrix[4];
+        skeleton_data.joint_orientation2_right_shoulder.z = skeleton.joints[JOINT_RIGHT_SHOULDER].orient.matrix[5];
+        skeleton_data.joint_orientation3_right_shoulder.x = skeleton.joints[JOINT_RIGHT_SHOULDER].orient.matrix[6];
+        skeleton_data.joint_orientation3_right_shoulder.y = skeleton.joints[JOINT_RIGHT_SHOULDER].orient.matrix[7];
+        skeleton_data.joint_orientation3_right_shoulder.z = skeleton.joints[JOINT_RIGHT_SHOULDER].orient.matrix[8];
+        }
+        else{
+        skeleton_data.joint_orientation1_right_shoulder.x = -9999;
+        skeleton_data.joint_orientation1_right_shoulder.y = -9999;
+        skeleton_data.joint_orientation1_right_shoulder.z = -9999;
+        skeleton_data.joint_orientation2_right_shoulder.x = -9999;
+        skeleton_data.joint_orientation2_right_shoulder.y = -9999;
+        skeleton_data.joint_orientation2_right_shoulder.z = -9999;
+        skeleton_data.joint_orientation3_right_shoulder.x = -9999;
+        skeleton_data.joint_orientation3_right_shoulder.y = -9999;
+        skeleton_data.joint_orientation3_right_shoulder.z = -9999;          
+        }
+        
+        if(skeleton.joints[JOINT_RIGHT_ELBOW].confidence > conf){
+        skeleton_data.joint_orientation1_right_elbow.x = skeleton.joints[JOINT_RIGHT_ELBOW].orient.matrix[0];
+        skeleton_data.joint_orientation1_right_elbow.y = skeleton.joints[JOINT_RIGHT_ELBOW].orient.matrix[1];
+        skeleton_data.joint_orientation1_right_elbow.z = skeleton.joints[JOINT_RIGHT_ELBOW].orient.matrix[2];
+        skeleton_data.joint_orientation2_right_elbow.x = skeleton.joints[JOINT_RIGHT_ELBOW].orient.matrix[3];
+        skeleton_data.joint_orientation2_right_elbow.y = skeleton.joints[JOINT_RIGHT_ELBOW].orient.matrix[4];
+        skeleton_data.joint_orientation2_right_elbow.z = skeleton.joints[JOINT_RIGHT_ELBOW].orient.matrix[5];
+        skeleton_data.joint_orientation3_right_elbow.x = skeleton.joints[JOINT_RIGHT_ELBOW].orient.matrix[6];
+        skeleton_data.joint_orientation3_right_elbow.y = skeleton.joints[JOINT_RIGHT_ELBOW].orient.matrix[7];
+        skeleton_data.joint_orientation3_right_elbow.z = skeleton.joints[JOINT_RIGHT_ELBOW].orient.matrix[8];
+        }
+        else{
+        skeleton_data.joint_orientation1_right_elbow.x = -9999;
+        skeleton_data.joint_orientation1_right_elbow.y = -9999;
+        skeleton_data.joint_orientation1_right_elbow.z = -9999;
+        skeleton_data.joint_orientation2_right_elbow.x = -9999;
+        skeleton_data.joint_orientation2_right_elbow.y = -9999;
+        skeleton_data.joint_orientation2_right_elbow.z = -9999;
+        skeleton_data.joint_orientation3_right_elbow.x = -9999;
+        skeleton_data.joint_orientation3_right_elbow.y = -9999;
+        skeleton_data.joint_orientation3_right_elbow.z = -9999;          
+        }
 
         // Hand:  open (0), grasping (1), waving (2)
         /* TODO - see which of these actually work
@@ -619,33 +1006,33 @@ namespace nuitrack_body_tracker
 
         // Publish skeleton markers
 
-        PublishMarker(  // show marker at KEY_JOINT_TO_TRACK location
-          1, // ID
-          person_data.position3d.x, 
-          person_data.position3d.y, 
-          person_data.position3d.z, 
-          1.0, 0.0, 0.0 ); // r,g,b
+        // PublishMarker(  // show marker at KEY_JOINT_TO_TRACK location
+        //   1, // ID
+        //   person_data.position3d.x, 
+        //   person_data.position3d.y, 
+        //   person_data.position3d.z, 
+        //   1.0, 0.0, 0.0 ); // r,g,b
 
-        PublishMarker(
-          3, // ID
-          skeleton_data.joint_position_head.x,
-          skeleton_data.joint_position_head.y,
-          skeleton_data.joint_position_head.z,
-          0.7, 0.0, 0.7 ); // r,g,b
+        // PublishMarker(
+        //   3, // ID
+        //   skeleton_data.joint_position_head_real.x,
+        //   skeleton_data.joint_position_head_real.y,
+        //   skeleton_data.joint_position_head_real.z,
+        //   0.7, 0.0, 0.7 ); // r,g,b
 
-        PublishMarker(
-          4, // ID
-          skeleton_data.joint_position_spine_top.x,
-          skeleton_data.joint_position_spine_top.y,
-          skeleton_data.joint_position_spine_top.z,
-          0.0, 0.0, 1.0 ); // r,g,b
+        // PublishMarker(
+        //   4, // ID
+        //   skeleton_data.joint_position_left_collar_real.x,
+        //   skeleton_data.joint_position_left_collar_real.y,
+        //   skeleton_data.joint_position_left_collar_real.z,
+        //   0.0, 0.0, 1.0 ); // r,g,b
 
-        PublishMarker(
-          5, // ID
-          skeleton_data.joint_position_spine_mid.x,
-          skeleton_data.joint_position_spine_mid.y,
-          skeleton_data.joint_position_spine_mid.z,
-          0.0, 1.0, 0.0 ); // r,g,b
+        // PublishMarker(
+        //   5, // ID
+        //   skeleton_data.joint_position_torso_real.x,
+        //   skeleton_data.joint_position_torso_real.y,
+        //   skeleton_data.joint_position_torso_real.z,
+        //   0.0, 1.0, 0.0 ); // r,g,b
 
       }
 
