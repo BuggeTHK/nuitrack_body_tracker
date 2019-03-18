@@ -846,6 +846,29 @@ namespace nuitrack_body_tracker
         skeleton_data.joint_orientation3_head.z = -9999;          
         }
 
+        if(skeleton.joints[JOINT_HEAD].confidence > conf){
+        skeleton_data.joint_orientation1_neck.x = skeleton.joints[JOINT_NECK].orient.matrix[0];
+        skeleton_data.joint_orientation1_neck.y = skeleton.joints[JOINT_NECK].orient.matrix[1];
+        skeleton_data.joint_orientation1_neck.z = skeleton.joints[JOINT_NECK].orient.matrix[2];
+        skeleton_data.joint_orientation2_neck.x = skeleton.joints[JOINT_NECK].orient.matrix[3];
+        skeleton_data.joint_orientation2_neck.y = skeleton.joints[JOINT_NECK].orient.matrix[4];
+        skeleton_data.joint_orientation2_neck.z = skeleton.joints[JOINT_NECK].orient.matrix[5];
+        skeleton_data.joint_orientation3_neck.x = skeleton.joints[JOINT_NECK].orient.matrix[6];
+        skeleton_data.joint_orientation3_neck.y = skeleton.joints[JOINT_NECK].orient.matrix[7];
+        skeleton_data.joint_orientation3_neck.z = skeleton.joints[JOINT_NECK].orient.matrix[8];
+        }
+        else{
+        skeleton_data.joint_orientation1_neck.x = -9999;
+        skeleton_data.joint_orientation1_neck.y = -9999;
+        skeleton_data.joint_orientation1_neck.z = -9999;
+        skeleton_data.joint_orientation2_neck.x = -9999;
+        skeleton_data.joint_orientation2_neck.y = -9999;
+        skeleton_data.joint_orientation2_neck.z = -9999;
+        skeleton_data.joint_orientation3_neck.x = -9999;
+        skeleton_data.joint_orientation3_neck.y = -9999;
+        skeleton_data.joint_orientation3_neck.z = -9999;          
+        }
+
         if(skeleton.joints[JOINT_WAIST].confidence > conf){
         skeleton_data.joint_orientation1_waist.x = skeleton.joints[JOINT_WAIST].orient.matrix[0];
         skeleton_data.joint_orientation1_waist.y = skeleton.joints[JOINT_WAIST].orient.matrix[1];
