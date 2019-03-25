@@ -39,8 +39,13 @@ class skelly:
         self.prev_right_shoulder_angle = None
         self.prev_right_elbow_angle = None
         self.prev_right_wrist_angle = None
+        self.prev_left_shoulder_p = None
+        self.prev_left_shoulder_y = None
+        self.prev_right_shoulder_p = None
+        self.prev_right_shoulder_y = None
+        self.prev_waist_rotation = None
         self.dev_angle = 10 #deviation angle to limit instant jumps
-        self.angle_percent = 0.01 #speed of drift towards new extreme angle
+        self.angle_percent = 0.25 #speed of drift towards new extreme angle
         # self.ts = message_filters.ApproximateTimeSynchronizer([self.skelly_sub, self.image_sub], 10, 0.1, allow_headerless=True)
 
         # self.ts.registerCallback(self.callback)
@@ -53,13 +58,7 @@ class skelly:
             print(e)
         if self.skeleton_image is None:
             self.skeleton_image = self.cv_image
-            # font = ImageFont.truetype(self.fontpath, 32)
-            # img_pil = PIL_Image.fromarray(self.skeleton_image)
-            # draw = ImageDraw.Draw(img_pil)
-            # draw.text((15,50),u""+"トラッキング待ち", font=font, fill=(0,255,0,0))
             self.skeleton_image = self.unicode_draw(self.skeleton_image, u"トラッキング待ち", 50, self.fontpath, (10,30), (0,255,0,0))
-            # np.array(img_pil)
-            # cv2.putText(self.skeleton_image,"*WAITING FOR TRACKING*",(15,50), font, 2,(0,255,0),2,cv2.LINE_AA)
         if self.prev_frame is None:
             self.prev_frame = self.skeleton_image
         
@@ -76,32 +75,15 @@ class skelly:
             self.noframe_counter = 0
             self.prev_frame = self.skeleton_image
         if self.noframe_counter > self.notrack_timeout:
-            self.cv_image = self.unicode_draw(self.cv_image, u"骨格検知失敗", 60, self.fontpath, (10,30), (0,0,255,0))
-            # cv2.putText(self.cv_image,"NO TRACKING LOCK",(15,50), font, 2,(0,0,255),2,cv2.LINE_AA)
+            self.cv_image = self.unicode_draw(self.cv_image, u"骨格検出失敗", 60, self.fontpath, (10,30), (0,0,255,0))
             cv2.imshow("camera_output", self.cv_image)
         else:    
             cv2.imshow("camera_output", self.skeleton_image)
         cv2.waitKey(3)
 
     def callback(self, skeleton):
-        
-        # v1, v2 = self.get_joint_vectors(skeleton.joint_position_right_elbow_real, \
-        #                         skeleton.joint_position_right_wrist_real, \
-        #                         skeleton.joint_position_right_shoulder_real)
-        # angle = self.angle_between(v1, v2)/np.pi*180
-
-        m = self.make_matrix(skeleton.joint_orientation1_neck,\
-                            skeleton.joint_orientation2_neck,\
-                            skeleton.joint_orientation3_neck)
-        # print(m)
-        rotations = self.rotationmatrix_to_angles(m)/np.pi*180
-        # print(rotations)
-
-
         image = self.cv_image
         
-        #draw head and spine
-        # angle = self.get_angle(skeleton.joint_position_neck_real, skeleton.joint_position_head_real, )
         neck_angle = None
         left_shoulder_angle = None
         left_elbow_angle = None
@@ -109,18 +91,39 @@ class skelly:
         right_shoulder_angle = None
         right_elbow_angle = None
         right_wrist_angle = None
+        left_shoulder_p = None
+        left_shoulder_y = None
+        right_shoulder_p = None
+        right_shoulder_y = None
+        waist_rotation = None
+        
+        WAIST_Y = None
+        RARM_SHOULDER_P = None
+        RARM_SHOULDER_R = None
+        RARM_SHOULDER_Y = None
+        RARM_ELBOW_P = None
+        RARM_WRIST_Y = None
+        RARM_WRIST_R = None
+        RARM_WRIST_P = None
+        R_HAND = None
+        LARM_SHOULDER_P = None
+        LARM_SHOULDER_R = None
+        LARM_SHOULDER_Y = None
+        LARM_ELBOW_P = None
+        LARM_WRIST_P = None
+        LARM_WRIST_R = None
+        LARM_WRIST_Y = None
+        L_HAND = None
+        
+        HEAD_P = None
+        HEAD_R = None
+        HEAD_Y = None
+        WAIST_P = None
+        WAIST_R = None
 
 
+        #draw head and spine
         neck_angle = self.get_angle(skeleton.joint_position_neck_real, skeleton.joint_position_head_real, skeleton.joint_position_left_collar_real)
-        # if self.prev_neck_angle is None:    
-        #     self.prev_neck_angle = neck_angle
-        # elif self.prev_neck_angle == -9999:
-        #     self.prev_neck_angle = neck_angle
-        # elif np.absolute(self.prev_neck_angle - neck_angle) > self.dev_angle:
-        #     neck_angle = (self.prev_neck_angle - neck_angle)/(np.absolute(self.prev_neck_angle - neck_angle))*(np.absolute(self.prev_neck_angle - neck_angle)/20)*-1
-        #     self.prev_neck_angle = neck_angle
-        # else:
-        #     self.prev_neck_angle = neck_angle
         self.prev_neck_angle, neck_angle = self.angle_logic(self.prev_neck_angle, neck_angle)
         image = self.drawbone(skeleton.joint_position_head_proj, skeleton.joint_position_neck_proj, image, "head-neck", neck_angle)
 
@@ -130,80 +133,91 @@ class skelly:
         
         #draw left side
         left_shoulder_angle = self.get_angle(skeleton.joint_position_left_shoulder_real, skeleton.joint_position_left_collar_real, skeleton.joint_position_left_elbow_real)
-        # if self.prev_left_shoulder_angle is None:    
-        #     self.prev_left_shoulder_angle = left_shoulder_angle
-        # elif self.prev_left_shoulder_angle == -9999:
-        #     self.prev_left_shoulder_angle = left_shoulder_angle
-        # elif np.absolute(self.prev_left_shoulder_angle - left_shoulder_angle) > self.dev_angle:
-        #     left_shoulder_angle = None
-        # else:
-        #     self.prev_left_shoulder_angle = left_shoulder_angle
         self.prev_left_shoulder_angle, left_shoulder_angle = self.angle_logic(self.prev_left_shoulder_angle, left_shoulder_angle)
+        LARM_SHOULDER_R = left_shoulder_angle
         image = self.drawbone(skeleton.joint_position_left_collar_proj, skeleton.joint_position_left_shoulder_proj, image, "collar-leftshoulder", left_shoulder_angle)
                 
         left_elbow_angle = self.get_angle(skeleton.joint_position_left_elbow_real, skeleton.joint_position_left_shoulder_real, skeleton.joint_position_left_wrist_real)
-        # if self.prev_left_elbow_angle is None:    
-        #     self.prev_left_elbow_angle = left_elbow_angle
-        # elif self.prev_left_elbow_angle == -9999:
-        #     self.prev_left_elbow_angle = left_elbow_angle
-        # elif np.absolute(self.prev_left_elbow_angle - left_elbow_angle) > self.dev_angle:
-        #     left_elbow_angle = None
-        # else:
-        #     self.prev_left_elbow_angle = left_elbow_angle
         self.prev_left_elbow_angle, left_elbow_angle = self.angle_logic(self.prev_left_elbow_angle, left_elbow_angle)
+        LARM_ELBOW_P = left_elbow_angle
         image = self.drawbone(skeleton.joint_position_left_shoulder_proj, skeleton.joint_position_left_elbow_proj, image, "leftshoulder-leftelbow", left_elbow_angle)
         
         left_wrist_angle = self.get_angle(skeleton.joint_position_left_wrist_real, skeleton.joint_position_left_elbow_real, skeleton.joint_position_left_hand_real)
-        # if self.prev_left_wrist_angle is None:    
-        #     self.prev_left_wrist_angle = left_wrist_angle
-        # elif self.prev_left_wrist_angle == -9999:
-        #     self.prev_left_wrist_angle = left_wrist_angle
-        # elif np.absolute(self.prev_left_wrist_angle - left_wrist_angle) > self.dev_angle:
-        #     left_wrist_angle = None
-        # else:
-        #     self.prev_left_wrist_angle = left_wrist_angle
         self.prev_left_wrist_angle, left_wrist_angle = self.angle_logic(self.prev_left_wrist_angle, left_wrist_angle)
         image = self.drawbone(skeleton.joint_position_left_elbow_proj, skeleton.joint_position_left_wrist_proj, image, "leftelbow-leftwrist", left_wrist_angle)
         image = self.drawbone(skeleton.joint_position_left_wrist_proj, skeleton.joint_position_left_hand_proj, image, "leftwrist-lefthand")
 
         #draw right side
         right_shoulder_angle = self.get_angle(skeleton.joint_position_right_shoulder_real, skeleton.joint_position_left_collar_real, skeleton.joint_position_right_elbow_real)
-        # if self.prev_right_shoulder_angle is None:    
-        #     self.prev_right_shoulder_angle = right_shoulder_angle
-        # elif self.prev_right_shoulder_angle == -9999:
-        #     self.prev_right_shoulder_angle = right_shoulder_angle
-        # elif np.absolute(self.prev_right_shoulder_angle - right_shoulder_angle) > self.dev_angle:
-        #     right_shoulder_angle = None
-        # else:
-        #     self.prev_right_shoulder_angle = right_shoulder_angle
         self.prev_right_shoulder_angle, right_shoulder_angle = self.angle_logic(self.prev_right_shoulder_angle, right_shoulder_angle)    
+        RARM_SHOULDER_R = right_shoulder_angle
         image = self.drawbone(skeleton.joint_position_left_collar_proj, skeleton.joint_position_right_shoulder_proj, image, "collar-rightshoulder", right_shoulder_angle)
 
         right_elbow_angle = self.get_angle(skeleton.joint_position_right_elbow_real, skeleton.joint_position_right_shoulder_real, skeleton.joint_position_right_wrist_real)
-        # if self.prev_right_elbow_angle is None:    
-        #     self.prev_right_elbow_angle = right_elbow_angle
-        # elif self.prev_right_elbow_angle == -9999:
-        #     self.prev_right_elbow_angle = right_elbow_angle
-        # elif np.absolute(self.prev_right_elbow_angle - right_elbow_angle) > self.dev_angle:
-        #     right_elbow_angle = None
-        # else:
-        #     self.prev_right_elbow_angle = right_elbow_angle
         self.prev_right_elbow_angle, right_elbow_angle = self.angle_logic(self.prev_right_elbow_angle, right_elbow_angle)
+        RARM_ELBOW_P = right_elbow_angle
         image = self.drawbone(skeleton.joint_position_right_shoulder_proj, skeleton.joint_position_right_elbow_proj, image, "rightshoulder-rightelbow", right_elbow_angle)
 
         right_wrist_angle = self.get_angle(skeleton.joint_position_right_wrist_real, skeleton.joint_position_right_elbow_real, skeleton.joint_position_right_hand_real)
-        # if self.prev_right_wrist_angle is None:    
-        #     self.prev_right_wrist_angle = right_wrist_angle
-        # elif self.prev_right_wrist_angle == -9999:
-        #     self.prev_right_wrist_angle = right_wrist_angle
-        # elif np.absolute(self.prev_right_wrist_angle - right_wrist_angle) > self.dev_angle:
-        #     right_wrist_angle = None
-        # else:
-        #     self.prev_right_elbow_angle = right_elbow_angle
         self.prev_right_wrist_angle, right_wrist_angle = self.angle_logic(self.prev_right_wrist_angle, right_wrist_angle)
         image = self.drawbone(skeleton.joint_position_right_elbow_proj, skeleton.joint_position_right_wrist_proj, image, "rightelbow-rightwrist", right_wrist_angle)
         image = self.drawbone(skeleton.joint_position_right_wrist_proj, skeleton.joint_position_right_hand_proj, image, "rightwrist-righthand")
 
+        rotationdata = [[skeleton.joint_orientation1_left_shoulder, skeleton.joint_orientation2_left_shoulder,\
+                        skeleton.joint_orientation3_left_shoulder, "rot_left_shoulder"],\
+                        [skeleton.joint_orientation1_left_elbow, skeleton.joint_orientation2_left_elbow,\
+                        skeleton.joint_orientation3_left_elbow, "rot_left_elbow"],\
+                        [skeleton.joint_orientation1_right_shoulder, skeleton.joint_orientation2_right_shoulder,\
+                        skeleton.joint_orientation3_right_shoulder, "rot_right_shoulder"],\
+                        [skeleton.joint_orientation1_right_elbow, skeleton.joint_orientation2_right_elbow,\
+                        skeleton.joint_orientation3_right_elbow, "rot_right_elbow"],\
+                        [skeleton.joint_orientation1_head, skeleton.joint_orientation2_head,\
+                        skeleton.joint_orientation3_head, "rot_head"],\
+                        [skeleton.joint_orientation1_neck, skeleton.joint_orientation2_neck,\
+                        skeleton.joint_orientation3_neck, "rot_neck"],\
+                        [skeleton.joint_orientation1_waist, skeleton.joint_orientation2_waist,\
+                        skeleton.joint_orientation3_waist, "rot_waist"]]
+        
+        rotationlist = []
+        for data in rotationdata:
+            rotationlist.append([self.make_matrix(data[0], data[1], data[2]),data[3]])
+        
+
+        for data in rotationlist:
+            if data[0][0][0] != -9999:
+                rotations = self.rotationmatrix_to_angles(data[0])/np.pi*180
+            else:
+                rotations = [-9999, -9999, -9999]
+            if data[1] == "rot_left_shoulder":
+                left_shoulder_p = rotations[0]
+                self.prev_left_shoulder_p, left_shoulder_p = self.angle_logic(self.prev_left_shoulder_p, left_shoulder_p)    
+                LARM_SHOULDER_P = left_shoulder_p
+                # LARM_SHOULDER_R = rotations[2]
+            elif data[1] == "rot_left_elbow":
+                left_shoulder_y = rotations[2]
+                self.prev_left_shoulder_y, left_shoulder_y = self.angle_logic(self.prev_left_shoulder_y, left_shoulder_y)    
+                LARM_SHOULDER_Y = left_shoulder_y
+            
+            elif data[1] == "rot_right_shoulder":
+                right_shoulder_p = rotations[0]
+                self.prev_right_shoulder_p, right_shoulder_p = self.angle_logic(self.prev_right_shoulder_p, right_shoulder_p)    
+                RARM_SHOULDER_P = right_shoulder_p
+            elif data[1] == "rot_right_elbow":
+                # print(rotations)
+                right_shoulder_y = rotations[2]
+                self.prev_right_shoulder_y, right_shoulder_y = self.angle_logic(self.prev_right_shoulder_y, right_shoulder_y)
+                RARM_SHOULDER_Y = right_shoulder_y
+            
+            elif data[1] == "rot_head":
+                waist_rotation = rotations[1]
+                self.prev_waist_rotation, waist_rotation = self.angle_logic(self.prev_waist_rotation, waist_rotation)
+                WAIST_Y = waist_rotation
+            elif data[1] == "rot_waist":
+                pass
+                    # print("rot_waist")
+                    # print(str(rotations))
+
+        #Display bones made of low-confidence joints. 
         if len(self.noconf_list) > 0:
             y = 10
             font = cv2.FONT_HERSHEY_SIMPLEX
@@ -212,18 +226,195 @@ class skelly:
                 if len(item) > textlength: textlength = len(item)
             cv2.rectangle(image,(5,5),(textlength*18, 25*(len(self.noconf_list)+2)),(0,255,0),-1)
             image = self.unicode_draw(image, u"不安定ボーン：", 32, self.fontpath, (10,y), (0,0,255,0))
-            # cv2.putText(image,"Low confidence:",(10,y), font, 1,(0,0,255),1,cv2.LINE_AA)
             for key in sorted(self.noconf_list.iterkeys()):
                 y += 25
                 image = self.unicode_draw(image, key, 32, self.fontpath, (10,y), (0,0,255,0))
-                # cv2.putText(image,key,(10,y), font, 1,(0,0,255),1,cv2.LINE_AA)
                 if self.noconf_list[key] == 0:
                     del self.noconf_list[key]
                 else:
                     self.noconf_list[key] -= 1
         self.skeleton_image = image
-        # cv2.line(self.skeleton_image,(cols,rows),(0,0),(255,0,0),5)
-        # cv2.circle(self.skeleton_image, (int(proj_elbow[0]*rows), int(proj_elbow[1]*cols)), 10, 255)
+
+        #setting joints with value None to 0
+        jointlist = [   WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
+                        R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
+                        L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R]
+        jointlist = self.none_to_zero(jointlist)
+        WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
+        R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
+        L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R = jointlist
+
+        #Processing angles to match physical robot:
+        if np.absolute(WAIST_Y) < 7: #deadzone for neutral position
+            WAIST_Y = 0
+        else: WAIST_Y = WAIST_Y*2 #exagerrating waist angle for easy control while facing screen
+        RARM_SHOULDER_P += 20 #shift 20 degrees forward to match neutral position.
+        LARM_SHOULDER_P += 20 #                      ""
+        if np.absolute(RARM_SHOULDER_P) < 6: #deadzone for neutral position
+            RARM_SHOULDER_P = 0
+        if np.absolute(LARM_SHOULDER_P) < 6: #deadzone for neutral position
+            LARM_SHOULDER_P = 0
+        RARM_SHOULDER_P = RARM_SHOULDER_P * 1.1 #slightly exaggerating angle for easier control
+        LARM_SHOULDER_P = LARM_SHOULDER_P * 1.1 #                  ""
+        RARM_SHOULDER_R -= 100 #shifting angle to match neutral position
+        LARM_SHOULDER_R -= 100 #                ""
+        RARM_SHOULDER_R *= -1  #flipping sign to match robot
+        if np.absolute(RARM_SHOULDER_R) < 7:
+            RARM_SHOULDER_R = 0
+        if np.absolute(LARM_SHOULDER_R) < 7:
+            LARM_SHOULDER_R = 0
+        RARM_SHOULDER_Y += 90 #shifting angle to match neutral position
+        LARM_SHOULDER_Y -= 90 #                 ""
+        RARM_SHOULDER_Y *= -1 #Flipping sign to match robot
+        LARM_SHOULDER_Y *= -1 #            ""
+        if np.absolute(RARM_SHOULDER_Y) < 7: #deadzone for neutral position
+            RARM_SHOULDER_Y = 0
+        if np.absolute(LARM_SHOULDER_Y) < 7: #deadzone for neutral position
+            LARM_SHOULDER_Y = 0
+        RARM_ELBOW_P -= 210 #shifting angle to match robot
+        LARM_ELBOW_P -= 210 #            ""
+        
+        
+        #applying typeF physical movement limits        
+        if RARM_SHOULDER_P < -87: RARM_SHOULDER_P = -87
+        if RARM_SHOULDER_P > 19: RARM_SHOULDER_P = 19
+        if RARM_SHOULDER_R < -89: RARM_SHOULDER_R = -89
+        if RARM_SHOULDER_R > 0: RARM_SHOULDER_R = 0
+        if RARM_SHOULDER_Y < -360: RARM_SHOULDER_Y = -360
+        if RARM_SHOULDER_Y > 360: RARM_SHOULDER_Y = 360
+        if RARM_ELBOW_P < -180: RARM_ELBOW_P = -180
+        if RARM_ELBOW_P > 0: RARM_ELBOW_P = 0
+        if RARM_WRIST_Y < -360: RARM_WRIST_Y = -360
+        if RARM_WRIST_Y > 360: RARM_WRIST_Y = 360
+        if RARM_WRIST_P < -25: RARM_WRIST_P = -25
+        if RARM_WRIST_P > 25: RARM_WRIST_P = 25
+        if RARM_WRIST_R < -40: RARM_WRIST_R = -40
+        if RARM_WRIST_R > 80: RARM_WRIST_R = 80
+        if LARM_SHOULDER_P < -87: LARM_SHOULDER_P = -87
+        if LARM_SHOULDER_P > 19: LARM_SHOULDER_P = 19
+        if LARM_SHOULDER_R < 0: LARM_SHOULDER_R = 0
+        if LARM_SHOULDER_R > 89: LARM_SHOULDER_R = 89
+        if LARM_SHOULDER_Y < -360: LARM_SHOULDER_Y = -360
+        if LARM_SHOULDER_Y > 360: LARM_SHOULDER_Y = 360
+        if LARM_ELBOW_P < -180: LARM_ELBOW_P = -180
+        if LARM_ELBOW_P > 0: LARM_ELBOW_P = 0
+        if LARM_WRIST_Y < -360: LARM_WRIST_Y = -360
+        if LARM_WRIST_Y > 360: LARM_WRIST_Y = 360
+        if LARM_WRIST_P < -25: LARM_WRIST_P = -25
+        if LARM_WRIST_P > 25: LARM_WRIST_P = 25
+        if LARM_WRIST_R < -80: LARM_WRIST_R = -80
+        if LARM_WRIST_R > 40: LARM_WRIST_R = 40
+        if WAIST_Y < -360: WAIST_Y = -360
+        if WAIST_Y > 360: WAIST_Y = 360
+        if WAIST_P < -9: WAIST_P = -9
+        if WAIST_P > 39: WAIST_P = 39
+        if WAIST_R < -7: WAIST_R = -7
+        if WAIST_R > 7: WAIST_R = 7
+        if HEAD_Y < -360: HEAD_Y = -360
+        if HEAD_Y > 360: HEAD_Y = 360
+        if HEAD_P < -20: HEAD_P = -20
+        if HEAD_P > 60: HEAD_P = 60
+        if HEAD_R < -20: HEAD_R = -20
+        if HEAD_R > 20: HEAD_R = 20
+
+        print(  "waist: "+str(WAIST_Y)+"\n"+\
+                "rarm shoulder p: "+str(RARM_SHOULDER_P)+"\n"+\
+                "rarm shoulder r: "+str(RARM_SHOULDER_R)+"\n"+\
+                "rarm shoulder y: "+str(RARM_SHOULDER_Y)+"\n"+\
+                "rarm elbow p: "+str(RARM_ELBOW_P)+"\n"+\
+                "rarm wrist p: "+str(RARM_WRIST_P)+"\n"+\
+                "rarm wrist r: "+str(RARM_WRIST_R)+"\n"+\
+                "rarm wrist y: "+str(RARM_WRIST_Y)+"\n"+\
+                "r hand: "+str(R_HAND)+"\n"+\
+                "larm shoulder p: "+str(LARM_SHOULDER_P)+"\n"+\
+                "larm shoulder r: "+str(LARM_SHOULDER_R)+"\n"+\
+                "larm shoulder y: "+str(LARM_SHOULDER_Y)+"\n"+\
+                "larm elbow p: "+str(LARM_ELBOW_P)+"\n"+\
+                "larm wrist p: "+str(LARM_WRIST_P)+"\n"+\
+                "larm wrist r: "+str(LARM_WRIST_R)+"\n"+\
+                "larm wrist y: "+str(LARM_WRIST_Y)+"\n"+\
+                "l hand: "+str(L_HAND)+"\n"+\
+                "head p: "+str(HEAD_P)+"\n"+\
+                "head r: "+str(HEAD_R)+"\n"+\
+                "head y: "+str(HEAD_Y)+"\n"+\
+                "waist p: "+str(WAIST_P)+"\n"+\
+                "waist r: "+str(WAIST_R)+"\n")
+
+        #############################TEST#####################
+        jointlist = [   WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
+                        R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
+                        L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R]
+        for j, line in enumerate(jointlist): 
+            jointlist[j] *= 10
+            jointlist[j] = int(jointlist[j])
+        WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
+        R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
+        L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R = jointlist
+        
+        
+        #     #head y p r:    
+        # HEAD_Y,HEAD_P,HEAD_R = int(-HEAD_Y),int(-HEAD_P),int(HEAD_R)
+        # #r shoulder p r y:
+        # RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y = int(RARM_SHOULDER_P),int(RARM_SHOULDER_R),int(RARM_SHOULDER_Y)
+        # #r elbow:
+        # RARM_ELBOW_P = int(-(RARM_ELBOW_P+1800))
+        # #r wrist y p r:
+        # RARM_WRIST_Y,RARM_WRIST_P,RARM_WRIST_R = int(RARM_WRIST_Y),int(RARM_WRIST_P),int(-RARM_WRIST_R)
+        # #waist r, r hand(no value,int(angles[12], waist y:
+        # WAIST_R,R_HAND,WAIST_Y = int(WAIST_R),int(R_HAND),int(-WAIST_Y)
+        # #l shoulder p r y:
+        # LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y = int(LARM_SHOULDER_P),int(-LARM_SHOULDER_R),int(-LARM_SHOULDER_Y)
+        # #l elbow:
+        # LARM_ELBOW_P = int(-(LARM_ELBOW_P+1800))
+        # #l wrist y p r:
+        # LARM_WRIST_Y,LARM_WRIST_P,LARM_WRIST_R = int(-LARM_WRIST_Y),int(LARM_WRIST_P),int(LARM_WRIST_R)
+        # #waist p, l hand(no value,angles[27]):
+        # WAIST_P,L_HAND = int(WAIST_P),int(L_HAND)
+
+
+
+        #additional processing to fit master format
+        LARM_SHOULDER_P *= -1
+        LARM_ELBOW_P += 1800
+        LARM_WRIST_P *= -1
+        LARM_WRIST_R *= -1
+
+        RARM_SHOULDER_P *= -1
+        RARM_SHOULDER_R *= -1
+        RARM_SHOULDER_Y *= -1
+        RARM_ELBOW_P += 1800
+        RARM_WRIST_Y *= -1
+        RARM_WRIST_P *= -1
+
+        print(  "master_waist: "+str(WAIST_Y)+"\n"+\
+                "master_rarm shoulder p: "+str(RARM_SHOULDER_P)+"\n"+\
+                "master_rarm shoulder r: "+str(RARM_SHOULDER_R)+"\n"+\
+                "master_rarm shoulder y: "+str(RARM_SHOULDER_Y)+"\n"+\
+                "master_rarm elbow p: "+str(RARM_ELBOW_P)+"\n"+\
+                "master_rarm wrist p: "+str(RARM_WRIST_P)+"\n"+\
+                "master_rarm wrist r: "+str(RARM_WRIST_R)+"\n"+\
+                "master_rarm wrist y: "+str(RARM_WRIST_Y)+"\n"+\
+                "master_r hand: "+str(R_HAND)+"\n"+\
+                "master_larm shoulder p: "+str(LARM_SHOULDER_P)+"\n"+\
+                "master_larm shoulder r: "+str(LARM_SHOULDER_R)+"\n"+\
+                "master_larm shoulder y: "+str(LARM_SHOULDER_Y)+"\n"+\
+                "master_larm elbow p: "+str(LARM_ELBOW_P)+"\n"+\
+                "master_larm wrist p: "+str(LARM_WRIST_P)+"\n"+\
+                "master_larm wrist r: "+str(LARM_WRIST_R)+"\n"+\
+                "master_larm wrist y: "+str(LARM_WRIST_Y)+"\n"+\
+                "master_l hand: "+str(L_HAND)+"\n"+\
+                "master_head p: "+str(HEAD_P)+"\n"+\
+                "master_head r: "+str(HEAD_R)+"\n"+\
+                "master_head y: "+str(HEAD_Y)+"\n"+\
+                "master_waist p: "+str(WAIST_P)+"\n"+\
+                "master_waist r: "+str(WAIST_R)+"\n")
+        #############################TEST#####################
+
+    def none_to_zero(self, jointlist):
+        for i, joint in enumerate(jointlist):
+            if jointlist[i] is None:
+                jointlist[i] = 0
+        return jointlist
     
     def unicode_draw(self, image, text, fontsize, fontpath, coords, color):
         font = ImageFont.truetype(fontpath, fontsize)
@@ -233,8 +424,8 @@ class skelly:
         image = np.array(img_pil)
         return image
 
-    # def get_joint_distance()
-# np.linalg.norm(np.array([1,2,4])-np.array([1,2,3]))
+    # def get_joint_distance():
+    #   np.linalg.norm(np.array([1,2,4])-np.array([1,2,3]))
 
 
     def angle_logic(self, prev_angle, angle):
@@ -242,12 +433,12 @@ class skelly:
             prev_angle = angle
         if prev_angle == -9999:
             prev_angle = angle
-        elif np.absolute(prev_angle - angle) > self.dev_angle:
+        elif np.absolute(prev_angle - angle) > self.dev_angle: #if angle has instantaneously jumped due to tracking error
             if angle != -9999:
                 angle = prev_angle + (prev_angle - angle)/(np.absolute(prev_angle - angle))*(np.absolute(prev_angle - angle)*self.angle_percent)*-1
                 prev_angle = angle
             else:
-                angle = None
+                angle = prev_angle
         else:
             prev_angle = angle
         return prev_angle, angle
@@ -309,8 +500,8 @@ class skelly:
         part1 = self.make_array(part1)
         part2 = self.make_array(part2)
         part3 = self.make_array(part3)
-        # m = np.array([[part1[0],part2[0],part3[0]],[part1[1],part2[1],part3[1]],[part1[2],part2[2],part3[2]]])
-        m = np.array([part1,part2,part3])
+        m = np.array([[part1[0],part2[0],part3[0]],[part1[1],part2[1],part3[1]],[part1[2],part2[2],part3[2]]])
+        #m = np.array([part1,part2,part3])
         # print(m)
         return m
 
