@@ -9,19 +9,83 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 import sys
 
-
+import pygame
+import time
 import rospy
 from body_tracker_msgs.msg import Skeleton
 from sensor_msgs.msg import Image
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Header
 import message_filters
+import commands
 
+JOINT_STATE_SIM = True
 
 
 class skelly:
 
     def __init__(self):
         # self.image_pub = rospy.Publisher("/skeleton_projection",Image, queue_size=10)
-        
+        if not JOINT_STATE_SIM:
+            self.master_pub = rospy.Publisher("master_states", JointState, queue_size=1)
+            self.master_state_ = JointState()
+            self.master_state_.header = Header()
+            self.master_state_.header.frame_id = "master_base"
+            self.master_state_.name = [""] * 17
+            self.master_state_.position = [0] * 17 
+            self.master_state_.name[0] = "waist_y"
+            self.master_state_.name[1] = "r_shoulder_p"
+            self.master_state_.name[2] = "r_shoulder_r"
+            self.master_state_.name[3] = "r_shoulder_y"
+            self.master_state_.name[4] = "r_elbow_p"
+            self.master_state_.name[5] = "r_wrist_y"
+            self.master_state_.name[6] = "r_wrist_p"
+            self.master_state_.name[7] = "r_wrist_r"
+            self.master_state_.name[8] = "r_hand"
+            self.master_state_.name[9] = "l_shoulder_p"
+            self.master_state_.name[10] = "l_shoulder_r"
+            self.master_state_.name[11] = "l_shoulder_y"
+            self.master_state_.name[12] = "l_elbow_p"
+            self.master_state_.name[13] = "l_wrist_y"
+            self.master_state_.name[14] = "l_wrist_p"
+            self.master_state_.name[15] = "l_wrist_r"
+            self.master_state_.name[16] = "l_hand"
+        else:
+            self.joint_state_publisher_ = rospy.Publisher("upper_joint_states", JointState, queue_size=1)
+            self.joint_state_ = JointState()
+            self.joint_state_.header = Header()
+            self.joint_state_.name = [""] * 28
+            self.joint_state_.position = [0] * 28
+            self.joint_state_.header.frame_id = "waist_link"
+            self.joint_state_.name[0] = "l_elbow_joint"
+            self.joint_state_.name[1] = "l_indexbase_joint"
+            self.joint_state_.name[2] = "l_indexend_joint"
+            self.joint_state_.name[3] = "l_indexmid_joint"
+            self.joint_state_.name[4] = "l_shoulder_p_joint"
+            self.joint_state_.name[5] = "l_shoulder_r_joint"
+            self.joint_state_.name[6] = "l_shoulder_y_joint"
+            self.joint_state_.name[7] = "l_thumb_joint"
+            self.joint_state_.name[8] = "l_wrist_p_joint"
+            self.joint_state_.name[9] = "l_wrist_r_joint"
+            self.joint_state_.name[10] = "l_wrist_y_joint"
+            self.joint_state_.name[11] = "neck_p_joint"
+            self.joint_state_.name[12] = "neck_r_joint"
+            self.joint_state_.name[13] = "neck_y_joint"
+            self.joint_state_.name[14] = "r_elbow_joint"
+            self.joint_state_.name[15] = "r_indexbase_joint"
+            self.joint_state_.name[16] = "r_indexend_joint"
+            self.joint_state_.name[17] = "r_indexmid_joint"
+            self.joint_state_.name[18] = "r_shoulder_p_joint"
+            self.joint_state_.name[19] = "r_shoulder_r_joint"
+            self.joint_state_.name[20] = "r_shoulder_y_joint"
+            self.joint_state_.name[21] = "r_thumb_joint"
+            self.joint_state_.name[22] = "r_wrist_p_joint"
+            self.joint_state_.name[23] = "r_wrist_r_joint"
+            self.joint_state_.name[24] = "r_wrist_y_joint"
+            self.joint_state_.name[25] = "waist_p_joint"
+            self.joint_state_.name[26] = "waist_r_joint"
+            self.joint_state_.name[27] = "waist_y_joint"
+
         self.bridge = CvBridge()
         self.skeleton_image = None
         self.noconf_list = {}
@@ -49,9 +113,32 @@ class skelly:
         # self.ts = message_filters.ApproximateTimeSynchronizer([self.skelly_sub, self.image_sub], 10, 0.1, allow_headerless=True)
 
         # self.ts.registerCallback(self.callback)
+        self.running = True
+
+        pygame.init()
+        pygame.event.clear()
+        self.eventclearedtime = time.time()
+        pygame.display.set_caption('Controller Input')
+        self.surface = None 
+
+        pygame.mouse.set_visible(False)
+        # pygame.event.set_grab(True)
+        self.Rdown = False
+
+        self.isalive = time.time()
+
+    def screenprint(self, message, surface, pos):
+        font = pygame.font.Font(None, 20)
+        linesize = font.get_linesize()
+        position = [10, 10]
+        position[1] += linesize*pos 
+        image = font.render(message, 1, (0,200,0))
+        surface.blit(image, position)
 
     def image_callback(self, image):
         # font = cv2.FONT_HERSHEY_SIMPLEX
+        self.isalive = time.time()
+
         try:
             self.cv_image = self.bridge.imgmsg_to_cv2(image,"bgr8")
         except CvBridgeError as e:
@@ -61,6 +148,12 @@ class skelly:
             self.skeleton_image = self.unicode_draw(self.skeleton_image, u"トラッキング待ち", 50, self.fontpath, (10,30), (0,255,0,0))
         if self.prev_frame is None:
             self.prev_frame = self.skeleton_image
+            cv2.imshow("camera_output", self.skeleton_image)
+            cv2.waitKey(3)
+            time.sleep(1.5)
+            self.surface = pygame.display.set_mode((300, 300))
+            pygame.event.set_grab(True)
+
         
         #check if tracking initiated (new frames in self.skeleton_image)
         if self.skeleton_image.shape == self.prev_frame.shape:
@@ -77,11 +170,121 @@ class skelly:
         if self.noframe_counter > self.notrack_timeout:
             self.cv_image = self.unicode_draw(self.cv_image, u"骨格検出失敗", 60, self.fontpath, (10,30), (0,0,255,0))
             cv2.imshow("camera_output", self.cv_image)
+            for event in pygame.event.get():
+                self.surface.fill((0,0,0))
+                if event.type == pygame.KEYDOWN:
+                    if event.scancode == 180: 
+                        self.screenprint("start: 180 (repeats)", self.surface,3)
+                        if not pygame.event.get_grab():
+                            pygame.event.set_grab(True)
+                            self.screenprint("GRAB: on", self.surface,11)
+                    elif event.scancode == 147: 
+                        self.screenprint("select: 147 (repeats)", self.surface,4)
+                        self.Rdown = False
+                    elif event.scancode == 174: 
+                        self.screenprint("x: 174 (repeats)", self.surface,5)
+                        self.Rdown = False
+                    elif event.scancode == 171: 
+                        self.screenprint("y: 171 (repeats)", self.surface,6)
+                        self.Rdown = False
+                    elif event.scancode == 173: 
+                        self.screenprint("a: 173 (repeats)", self.surface,7)
+                        self.Rdown = False
+                    elif event.scancode == 172: 
+                        self.screenprint("b: 172 (repeats)", self.surface,8)
+                        if self.Rdown:
+                            pygame.event.set_grab(False)
+                            self.screenprint("GRAB: off", self.surface,11)
+                            self.Rdown = False
+                    elif event.scancode == 123: 
+                        self.screenprint("L(volume +): 123 (repeats)", self.surface,9)
+                        self.Rdown = False
+                    elif event.scancode == 122: 
+                        self.screenprint("R(volume -): 122 (repeats)", self.surface,10)
+                        self.Rdown = True
+                    elif event.scancode == 9:
+                        pygame.event.set_grab(False)
+                        self.screenprint("GRAB: off", self.surface,11)
+                        self.Rdown = False
+                    elif event.scancode == 24:
+                        if not pygame.event.get_grab():
+                            self.screenprint("QUITTING", self.surface,11)
+                            self.running = False
+                            
+                    else: self.screenprint(str(event.scancode), self.surface,12)
+            pygame.display.flip()
+
+
         else:    
             cv2.imshow("camera_output", self.skeleton_image)
         cv2.waitKey(3)
 
+
+
+
     def callback(self, skeleton):
+
+        self.isalive = time.time()
+
+        if time.time() - self.eventclearedtime > 0.5:
+            pygame.event.clear()
+
+        for event in pygame.event.get():
+            self.surface.fill((0,0,0))
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    self.screenprint("click(trigger): 1 (no repeat)", self.surface,1)
+                    self.Rdown = False
+                elif event.button == 8:
+                    self.screenprint("back(trigger): 8 (no repeat)", self.surface,2)
+                    self.Rdown = False
+            elif event.type == pygame.MOUSEMOTION:
+                self.screenprint('mouse movement: ' + str(event.rel), self.surface,0)
+            elif event.type == pygame.KEYDOWN:
+                if event.scancode == 180: 
+                    self.screenprint("start: 180 (repeats)", self.surface,3)
+                    if not pygame.event.get_grab():
+                        pygame.event.set_grab(True)
+                        self.screenprint("GRAB: on", self.surface,11)
+                elif event.scancode == 147: 
+                    self.screenprint("select: 147 (repeats)", self.surface,4)
+                    self.Rdown = False
+                elif event.scancode == 174: 
+                    self.screenprint("x: 174 (repeats)", self.surface,5)
+                    self.Rdown = False
+                elif event.scancode == 171: 
+                    self.screenprint("y: 171 (repeats)", self.surface,6)
+                    self.Rdown = False
+                elif event.scancode == 173: 
+                    self.screenprint("a: 173 (repeats)", self.surface,7)
+                    self.Rdown = False
+                elif event.scancode == 172: 
+                    self.screenprint("b: 172 (repeats)", self.surface,8)
+                    if self.Rdown:
+                        pygame.event.set_grab(False)
+                        self.screenprint("GRAB: off", self.surface,11)
+                        self.Rdown = False
+                elif event.scancode == 123: 
+                    self.screenprint("L(volume +): 123 (repeats)", self.surface,9)
+                    self.Rdown = False
+                elif event.scancode == 122: 
+                    self.screenprint("R(volume -): 122 (repeats)", self.surface,10)
+                    self.Rdown = True
+                elif event.scancode == 9:
+                    pygame.event.set_grab(False)
+                    self.screenprint("GRAB: off", self.surface,11)
+                    self.Rdown = False
+                elif event.scancode == 24:
+                    if not pygame.event.get_grab():
+                        self.screenprint("QUITTING", self.surface,11)
+                        self.running = False
+                else: self.screenprint(str(event.scancode), self.surface,12)
+        self.eventclearedtime = time.time()
+        pygame.display.flip()
+
+
         image = self.cv_image
         
         neck_angle = None
@@ -317,98 +520,165 @@ class skelly:
         if HEAD_R < -20: HEAD_R = -20
         if HEAD_R > 20: HEAD_R = 20
 
-        print(  "waist: "+str(WAIST_Y)+"\n"+\
-                "rarm shoulder p: "+str(RARM_SHOULDER_P)+"\n"+\
-                "rarm shoulder r: "+str(RARM_SHOULDER_R)+"\n"+\
-                "rarm shoulder y: "+str(RARM_SHOULDER_Y)+"\n"+\
-                "rarm elbow p: "+str(RARM_ELBOW_P)+"\n"+\
-                "rarm wrist p: "+str(RARM_WRIST_P)+"\n"+\
-                "rarm wrist r: "+str(RARM_WRIST_R)+"\n"+\
-                "rarm wrist y: "+str(RARM_WRIST_Y)+"\n"+\
-                "r hand: "+str(R_HAND)+"\n"+\
-                "larm shoulder p: "+str(LARM_SHOULDER_P)+"\n"+\
-                "larm shoulder r: "+str(LARM_SHOULDER_R)+"\n"+\
-                "larm shoulder y: "+str(LARM_SHOULDER_Y)+"\n"+\
-                "larm elbow p: "+str(LARM_ELBOW_P)+"\n"+\
-                "larm wrist p: "+str(LARM_WRIST_P)+"\n"+\
-                "larm wrist r: "+str(LARM_WRIST_R)+"\n"+\
-                "larm wrist y: "+str(LARM_WRIST_Y)+"\n"+\
-                "l hand: "+str(L_HAND)+"\n"+\
-                "head p: "+str(HEAD_P)+"\n"+\
-                "head r: "+str(HEAD_R)+"\n"+\
-                "head y: "+str(HEAD_Y)+"\n"+\
-                "waist p: "+str(WAIST_P)+"\n"+\
-                "waist r: "+str(WAIST_R)+"\n")
-
-        #############################TEST#####################
-        jointlist = [   WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
-                        R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
-                        L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R]
-        for j, line in enumerate(jointlist): 
-            jointlist[j] *= 10
-            jointlist[j] = int(jointlist[j])
-        WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
-        R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
-        L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R = jointlist
         
-        
-        #     #head y p r:    
-        # HEAD_Y,HEAD_P,HEAD_R = int(-HEAD_Y),int(-HEAD_P),int(HEAD_R)
-        # #r shoulder p r y:
-        # RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y = int(RARM_SHOULDER_P),int(RARM_SHOULDER_R),int(RARM_SHOULDER_Y)
-        # #r elbow:
-        # RARM_ELBOW_P = int(-(RARM_ELBOW_P+1800))
-        # #r wrist y p r:
-        # RARM_WRIST_Y,RARM_WRIST_P,RARM_WRIST_R = int(RARM_WRIST_Y),int(RARM_WRIST_P),int(-RARM_WRIST_R)
-        # #waist r, r hand(no value,int(angles[12], waist y:
-        # WAIST_R,R_HAND,WAIST_Y = int(WAIST_R),int(R_HAND),int(-WAIST_Y)
-        # #l shoulder p r y:
-        # LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y = int(LARM_SHOULDER_P),int(-LARM_SHOULDER_R),int(-LARM_SHOULDER_Y)
-        # #l elbow:
-        # LARM_ELBOW_P = int(-(LARM_ELBOW_P+1800))
-        # #l wrist y p r:
-        # LARM_WRIST_Y,LARM_WRIST_P,LARM_WRIST_R = int(-LARM_WRIST_Y),int(LARM_WRIST_P),int(LARM_WRIST_R)
-        # #waist p, l hand(no value,angles[27]):
-        # WAIST_P,L_HAND = int(WAIST_P),int(L_HAND)
+        if not JOINT_STATE_SIM:
+            jointlist = [   WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
+                            R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
+                            L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R]
+            for j, line in enumerate(jointlist): 
+                jointlist[j] *= 10
+                jointlist[j] = int(jointlist[j])
+            WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
+            R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
+            L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R = jointlist
+            
+            
+            #     #head y p r:    
+            # HEAD_Y,HEAD_P,HEAD_R = int(-HEAD_Y),int(-HEAD_P),int(HEAD_R)
+            # #r shoulder p r y:
+            # RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y = int(RARM_SHOULDER_P),int(RARM_SHOULDER_R),int(RARM_SHOULDER_Y)
+            # #r elbow:
+            # RARM_ELBOW_P = int(-(RARM_ELBOW_P+1800))
+            # #r wrist y p r:
+            # RARM_WRIST_Y,RARM_WRIST_P,RARM_WRIST_R = int(RARM_WRIST_Y),int(RARM_WRIST_P),int(-RARM_WRIST_R)
+            # #waist r, r hand(no value,int(angles[12], waist y:
+            # WAIST_R,R_HAND,WAIST_Y = int(WAIST_R),int(R_HAND),int(-WAIST_Y)
+            # #l shoulder p r y:
+            # LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y = int(LARM_SHOULDER_P),int(-LARM_SHOULDER_R),int(-LARM_SHOULDER_Y)
+            # #l elbow:
+            # LARM_ELBOW_P = int(-(LARM_ELBOW_P+1800))
+            # #l wrist y p r:
+            # LARM_WRIST_Y,LARM_WRIST_P,LARM_WRIST_R = int(-LARM_WRIST_Y),int(LARM_WRIST_P),int(LARM_WRIST_R)
+            # #waist p, l hand(no value,angles[27]):
+            # WAIST_P,L_HAND = int(WAIST_P),int(L_HAND)
 
 
 
-        #additional processing to fit master format
-        LARM_SHOULDER_P *= -1
-        LARM_ELBOW_P += 1800
-        LARM_WRIST_P *= -1
-        LARM_WRIST_R *= -1
+            #additional processing to fit master format
+            LARM_SHOULDER_P *= -1
+            LARM_ELBOW_P += 1800
+            LARM_WRIST_P *= -1
+            LARM_WRIST_R *= -1
 
-        RARM_SHOULDER_P *= -1
-        RARM_SHOULDER_R *= -1
-        RARM_SHOULDER_Y *= -1
-        RARM_ELBOW_P += 1800
-        RARM_WRIST_Y *= -1
-        RARM_WRIST_P *= -1
+            RARM_SHOULDER_P *= -1
+            RARM_SHOULDER_R *= -1
+            RARM_SHOULDER_Y *= -1
+            RARM_ELBOW_P += 1800
+            RARM_WRIST_Y *= -1
+            RARM_WRIST_P *= -1
 
-        print(  "master_waist: "+str(WAIST_Y)+"\n"+\
-                "master_rarm shoulder p: "+str(RARM_SHOULDER_P)+"\n"+\
-                "master_rarm shoulder r: "+str(RARM_SHOULDER_R)+"\n"+\
-                "master_rarm shoulder y: "+str(RARM_SHOULDER_Y)+"\n"+\
-                "master_rarm elbow p: "+str(RARM_ELBOW_P)+"\n"+\
-                "master_rarm wrist p: "+str(RARM_WRIST_P)+"\n"+\
-                "master_rarm wrist r: "+str(RARM_WRIST_R)+"\n"+\
-                "master_rarm wrist y: "+str(RARM_WRIST_Y)+"\n"+\
-                "master_r hand: "+str(R_HAND)+"\n"+\
-                "master_larm shoulder p: "+str(LARM_SHOULDER_P)+"\n"+\
-                "master_larm shoulder r: "+str(LARM_SHOULDER_R)+"\n"+\
-                "master_larm shoulder y: "+str(LARM_SHOULDER_Y)+"\n"+\
-                "master_larm elbow p: "+str(LARM_ELBOW_P)+"\n"+\
-                "master_larm wrist p: "+str(LARM_WRIST_P)+"\n"+\
-                "master_larm wrist r: "+str(LARM_WRIST_R)+"\n"+\
-                "master_larm wrist y: "+str(LARM_WRIST_Y)+"\n"+\
-                "master_l hand: "+str(L_HAND)+"\n"+\
-                "master_head p: "+str(HEAD_P)+"\n"+\
-                "master_head r: "+str(HEAD_R)+"\n"+\
-                "master_head y: "+str(HEAD_Y)+"\n"+\
-                "master_waist p: "+str(WAIST_P)+"\n"+\
-                "master_waist r: "+str(WAIST_R)+"\n")
-        #############################TEST#####################
+            # print(  "master_waist: "+str(WAIST_Y)+"\n"+\
+            #         "master_rarm shoulder p: "+str(RARM_SHOULDER_P)+"\n"+\
+            #         "master_rarm shoulder r: "+str(RARM_SHOULDER_R)+"\n"+\
+            #         "master_rarm shoulder y: "+str(RARM_SHOULDER_Y)+"\n"+\
+            #         "master_rarm elbow p: "+str(RARM_ELBOW_P)+"\n"+\
+            #         "master_rarm wrist p: "+str(RARM_WRIST_P)+"\n"+\
+            #         "master_rarm wrist r: "+str(RARM_WRIST_R)+"\n"+\
+            #         "master_rarm wrist y: "+str(RARM_WRIST_Y)+"\n"+\
+            #         "master_r hand: "+str(R_HAND)+"\n"+\
+            #         "master_larm shoulder p: "+str(LARM_SHOULDER_P)+"\n"+\
+            #         "master_larm shoulder r: "+str(LARM_SHOULDER_R)+"\n"+\
+            #         "master_larm shoulder y: "+str(LARM_SHOULDER_Y)+"\n"+\
+            #         "master_larm elbow p: "+str(LARM_ELBOW_P)+"\n"+\
+            #         "master_larm wrist p: "+str(LARM_WRIST_P)+"\n"+\
+            #         "master_larm wrist r: "+str(LARM_WRIST_R)+"\n"+\
+            #         "master_larm wrist y: "+str(LARM_WRIST_Y)+"\n"+\
+            #         "master_l hand: "+str(L_HAND)+"\n"+\
+            #         "master_head p: "+str(HEAD_P)+"\n"+\
+            #         "master_head r: "+str(HEAD_R)+"\n"+\
+            #         "master_head y: "+str(HEAD_Y)+"\n"+\
+            #         "master_waist p: "+str(WAIST_P)+"\n"+\
+            #         "master_waist r: "+str(WAIST_R)+"\n")
+
+            #publishing to ROS:
+            # if commands.getoutput('xset q | grep LED')[65] == '3':
+            self.master_state_.position[0] = WAIST_Y
+            self.master_state_.position[1] = RARM_SHOULDER_P
+            self.master_state_.position[2] = RARM_SHOULDER_R
+            self.master_state_.position[3] = RARM_SHOULDER_Y
+            self.master_state_.position[4] = RARM_ELBOW_P
+            self.master_state_.position[5] = RARM_WRIST_Y
+            self.master_state_.position[6] = RARM_WRIST_P
+            self.master_state_.position[7] = RARM_WRIST_R
+            self.master_state_.position[8] = 0 #RARM_HAND
+            self.master_state_.position[9] = LARM_SHOULDER_P
+            self.master_state_.position[10] = LARM_SHOULDER_R
+            self.master_state_.position[11] = LARM_SHOULDER_Y
+            self.master_state_.position[12] = LARM_ELBOW_P
+            self.master_state_.position[13] = LARM_WRIST_Y
+            self.master_state_.position[14] = LARM_WRIST_P
+            self.master_state_.position[15] = LARM_WRIST_R
+            self.master_state_.position[16] = 0 #LARM_HAND
+            self.master_state_.header.stamp = rospy.Time.now()
+            self.master_pub.publish(self.master_state_)
+        else:
+
+            deg2rad = np.pi / 180
+            jointlist = [   WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
+                            R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
+                            L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R]
+            for j, line in enumerate(jointlist): 
+                jointlist[j] *= deg2rad
+            WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
+            R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
+            L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R = jointlist
+            # if commands.getoutput('xset q | grep LED')[65] == '3':
+            #publishing to ROS
+            self.joint_state_.position[0] = LARM_ELBOW_P	   	#"l_elbow_joint"
+            self.joint_state_.position[1] = 0	               	#"l_indexbase_joint"
+            self.joint_state_.position[2] = 0           	   	#"l_indexend_joint"
+            self.joint_state_.position[3] = 0           	   	#"l_indexmid_joint"
+            self.joint_state_.position[4] = LARM_SHOULDER_P	   	#"l_shoulder_p_joint"
+            self.joint_state_.position[5] = LARM_SHOULDER_R	   	#"l_shoulder_r_joint"
+            self.joint_state_.position[6] = LARM_SHOULDER_Y	   	#"l_shoulder_y_joint"
+            self.joint_state_.position[7] = 0           	   	#"l_thumb_joint"
+            self.joint_state_.position[8] = LARM_WRIST_P	   	#"l_wrist_p_joint"
+            self.joint_state_.position[9] = LARM_WRIST_R	   	#"l_wrist_r_joint"
+            self.joint_state_.position[10] = LARM_WRIST_Y	   	#"l_wrist_y_joint"
+            self.joint_state_.position[11] = 0                 	#"neck_p_joint"
+            self.joint_state_.position[12] = 0              	#"neck_r_joint"
+            self.joint_state_.position[13] = 0              	#"neck_y_joint"
+            self.joint_state_.position[14] = RARM_ELBOW_P   	#"r_elbow_joint"
+            self.joint_state_.position[15] = 0              	#"r_indexbase_joint"
+            self.joint_state_.position[16] = 0                 	#"r_indexend_joint"
+            self.joint_state_.position[17] = 0              	#"r_indexmid_joint"
+            self.joint_state_.position[18] = RARM_SHOULDER_P	#"r_shoulder_p_joint"
+            self.joint_state_.position[19] = RARM_SHOULDER_R	#"r_shoulder_r_joint"
+            self.joint_state_.position[20] = RARM_SHOULDER_Y	#"r_shoulder_y_joint"
+            self.joint_state_.position[21] = 0              	#"r_thumb_joint"
+            self.joint_state_.position[22] = RARM_WRIST_P   	#"r_wrist_p_joint"
+            self.joint_state_.position[23] = RARM_WRIST_R   	#"r_wrist_r_joint"
+            self.joint_state_.position[24] = RARM_WRIST_Y   	#"r_wrist_y_joint"
+            self.joint_state_.position[25] = WAIST_P        	#"waist_p_joint"
+            self.joint_state_.position[26] = WAIST_R        	#"waist_r_joint"
+            self.joint_state_.position[27] = WAIST_Y        	#"waist_y_joint"
+            self.joint_state_.header.stamp = rospy.Time.now()
+            self.joint_state_publisher_.publish(self.joint_state_)
+
+            print(  "waist: "+str(WAIST_Y)+"\n"+\
+                    "rarm shoulder p: "+str(RARM_SHOULDER_P)+"\n"+\
+                    "rarm shoulder r: "+str(RARM_SHOULDER_R)+"\n"+\
+                    "rarm shoulder y: "+str(RARM_SHOULDER_Y)+"\n"+\
+                    "rarm elbow p: "+str(RARM_ELBOW_P)+"\n"+\
+                    "rarm wrist p: "+str(RARM_WRIST_P)+"\n"+\
+                    "rarm wrist r: "+str(RARM_WRIST_R)+"\n"+\
+                    "rarm wrist y: "+str(RARM_WRIST_Y)+"\n"+\
+                    "r hand: "+str(R_HAND)+"\n"+\
+                    "larm shoulder p: "+str(LARM_SHOULDER_P)+"\n"+\
+                    "larm shoulder r: "+str(LARM_SHOULDER_R)+"\n"+\
+                    "larm shoulder y: "+str(LARM_SHOULDER_Y)+"\n"+\
+                    "larm elbow p: "+str(LARM_ELBOW_P)+"\n"+\
+                    "larm wrist p: "+str(LARM_WRIST_P)+"\n"+\
+                    "larm wrist r: "+str(LARM_WRIST_R)+"\n"+\
+                    "larm wrist y: "+str(LARM_WRIST_Y)+"\n"+\
+                    "l hand: "+str(L_HAND)+"\n"+\
+                    "head p: "+str(HEAD_P)+"\n"+\
+                    "head r: "+str(HEAD_R)+"\n"+\
+                    "head y: "+str(HEAD_Y)+"\n"+\
+                    "waist p: "+str(WAIST_P)+"\n"+\
+                    "waist r: "+str(WAIST_R)+"\n")
+                    #shoulder y is suspicious. Too high rotation? Arm turns backwards when lifting. 
+
 
     def none_to_zero(self, jointlist):
         for i, joint in enumerate(jointlist):
@@ -502,7 +772,6 @@ class skelly:
         part3 = self.make_array(part3)
         m = np.array([[part1[0],part2[0],part3[0]],[part1[1],part2[1],part3[1]],[part1[2],part2[2],part3[2]]])
         #m = np.array([part1,part2,part3])
-        # print(m)
         return m
 
     def is_rotation_matrix(self, R):
@@ -530,11 +799,25 @@ class skelly:
 def main(args):
     sk = skelly()
     rospy.init_node("skeleton_processor")
-    try: 
-        rospy.spin()
-    except KeyboardInterrupt:
-        print("Exiting...")
-    cv2.destroyAllWindows()
+    while sk.running:
+        time.sleep(0.1)
+        if time.time() - sk.isalive > 6:
+            if sk.surface != None:
+                sk.surface.fill((0,0,0))
+                sk.screenprint("No activity on subscribed topics detected.", sk.surface,0)
+                sk.screenprint("Press 'Esc', 'Q' or 'Ctrl' button to exit.", sk.surface,1)
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN:
+                        if event.scancode == 24 or event.scancode == 9 or event.scancode == 37:
+                            sk.screenprint("QUITTING", sk.surface,11)
+                            sk.running = False
+                        else: sk.screenprint(str(event.scancode), sk.surface,12)
+                pygame.display.flip()
+        if time.time() - sk.isalive > 20:
+            print("Timed out waiting for activity on subscribed topics. Exiting.")
+            sk.running = False
+    # pygame.quit()
+    # rospy.signal_shutdown("Quit")
 
 if __name__ == "__main__":
     main(sys.argv)
