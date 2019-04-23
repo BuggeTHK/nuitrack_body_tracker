@@ -133,6 +133,7 @@ class skelly:
         
         #head value set by hand-controller
         self.headrot = 0
+        self.headrot2 = 0
         #bow motion controller by user
         self.bowpos = [0, 0]
 
@@ -145,7 +146,7 @@ class skelly:
         self.fpscounter = 0
         self.second = 0
 
-        self.averaging_length = 3
+        self.averaging_length = 17 #3 is recommended
         self.averagelist = [None] * self.averaging_length
 
     def screenprint(self, message, surface, pos):
@@ -522,20 +523,33 @@ class skelly:
 
         #control head rotation with joystick
         mouse_rel = pygame.mouse.get_rel()
+        print(mouse_rel)
+        print(self.headrot2)
+        print(self.headrot)
         if self.mouse8down and self.play:
-            if mouse_rel[0] < 0:
+            if mouse_rel[0] < -50:
                 if self.headrot < 45:
                     self.headrot += 5
-            elif mouse_rel[0] > 0:
+            elif mouse_rel[0] > 50:
                 if self.headrot > -45:
                     self.headrot -= 5
+            if mouse_rel[1] < -50:
+                if self.headrot2 < 15:
+                    self.headrot2 += 5
+            elif mouse_rel[1] > 50:
+                if self.headrot2 > -10:
+                    self.headrot2 -= 5
 
         elif self.play:
             if self.headrot > 0:
                 self.headrot -= 5
             elif self.headrot < 0:
                 self.headrot += 5
-        HEAD_Y = self.headrot
+            if self.headrot2 > 0:
+                self.headrot2 -= 5
+            elif self.headrot2 < 0:
+                self.headrot2 += 5
+        HEAD_Y, HEAD_P = self.headrot, self.headrot2
         
         # print(HEAD_Y)
 
@@ -550,7 +564,10 @@ class skelly:
                 self.bowpos[0] -= 2
             if self.bowpos[1] > 0:
                 self.bowpos[1] -= 2
-        HEAD_P, WAIST_P = self.bowpos[0], self.bowpos[1]
+        
+        if self.headrot2 == 0:        
+            HEAD_P = self.bowpos[0]
+        WAIST_P = self.bowpos[1]
         # print(HEAD_P, WAIST_P)
             
 
@@ -822,10 +839,6 @@ class skelly:
         draw.text(coords, text, font=font, fill=color)
         image = np.array(img_pil)
         return image
-
-    # def get_joint_distance():
-    #   np.linalg.norm(np.array([1,2,4])-np.array([1,2,3]))
-
 
     def angle_logic(self, prev_angle, angle):
         if prev_angle is None:    
