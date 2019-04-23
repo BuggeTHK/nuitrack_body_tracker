@@ -139,6 +139,14 @@ class skelly:
         #is mouse button 8 and 1 depressed
         self.mouse8down = False
         self.mouse1down = False
+        
+        #keep track of frames per second
+        self.fps = 0
+        self.fpscounter = 0
+        self.second = 0
+
+        self.averaging_length = 3
+        self.averagelist = [None] * self.averaging_length
 
     def screenprint(self, message, surface, pos):
         font = pygame.font.Font(None, 20)
@@ -247,6 +255,21 @@ class skelly:
 
         image = self.cv_image
         
+        if self.second == 0:
+            self.second = time.time()
+        elif time.time() - self.second > 1:
+            self.fps = self.fpscounter
+            self.fpscounter = 0
+            self.second = time.time()
+        else:
+            self.fpscounter += 1
+        image = self.unicode_draw(image, "FPS: " + str(self.fps), 32, self.fontpath, (750,0), (255,0,0,0))
+        
+        if self.play:
+            image = self.unicode_draw(image, u"実行", 32, self.fontpath, (765,425), (0,255,0,0))
+        else:
+            image = self.unicode_draw(image, u"停止", 32, self.fontpath, (765,425), (0,0,255,0))
+
         neck_angle = None
         left_shoulder_angle = None
         left_elbow_angle = None
@@ -357,23 +380,23 @@ class skelly:
                 LARM_SHOULDER_P = left_shoulder_p
                 # LARM_SHOULDER_R = rotations[2]
             elif data[1] == "rot_left_elbow":
-                #Disabling LARM_SHOULDER_Y, tracking does not pick this up accurately.#####
-                # left_shoulder_y = rotations[2]
-                # self.prev_left_shoulder_y, left_shoulder_y = self.angle_logic(self.prev_left_shoulder_y, left_shoulder_y)    
-                # LARM_SHOULDER_Y = left_shoulder_y
-                ###########################################################################
-                LARM_SHOULDER_Y = 0
+                #LARM_SHOULDER_Y tracking unstable, values limited in post.#####
+                left_shoulder_y = rotations[2]
+                self.prev_left_shoulder_y, left_shoulder_y = self.angle_logic(self.prev_left_shoulder_y, left_shoulder_y)    
+                LARM_SHOULDER_Y = left_shoulder_y
+                ################################################################
+                # LARM_SHOULDER_Y = 0
             elif data[1] == "rot_right_shoulder":
                 right_shoulder_p = rotations[0]
                 self.prev_right_shoulder_p, right_shoulder_p = self.angle_logic(self.prev_right_shoulder_p, right_shoulder_p)    
                 RARM_SHOULDER_P = right_shoulder_p
             elif data[1] == "rot_right_elbow":
-                #Disabling RARM_SHOULDER_Y, tracking does not pick this up accurately.#####
-                # right_shoulder_y = rotations[2]
-                # self.prev_right_shoulder_y, right_shoulder_y = self.angle_logic(self.prev_right_shoulder_y, right_shoulder_y)
-                # RARM_SHOULDER_Y = right_shoulder_y
-                ###########################################################################
-                RARM_SHOULDER_Y = 0
+                #LARM_SHOULDER_Y tracking unstable, values limited in post.#####
+                right_shoulder_y = rotations[2]
+                self.prev_right_shoulder_y, right_shoulder_y = self.angle_logic(self.prev_right_shoulder_y, right_shoulder_y)
+                RARM_SHOULDER_Y = right_shoulder_y
+                ################################################################
+                # RARM_SHOULDER_Y = 0
             elif data[1] == "rot_head":
                 waist_rotation = rotations[1]
                 self.prev_waist_rotation, waist_rotation = self.angle_logic(self.prev_waist_rotation, waist_rotation)
@@ -382,6 +405,8 @@ class skelly:
                 pass
                     # print("rot_waist")
                     # print(str(rotations))
+
+
 
         #Display bones made of low-confidence joints. 
         if len(self.noconf_list) > 0:
@@ -429,15 +454,14 @@ class skelly:
             RARM_SHOULDER_R = 0
         if np.absolute(LARM_SHOULDER_R) < 7:
             LARM_SHOULDER_R = 0
-        #Disabling LARM_SHOULDER_Y, RARM_SHOULDER_Y, tracking does not pick this up accurately.#####
-        # RARM_SHOULDER_Y += 90 #shifting angle to match neutral position
-        # LARM_SHOULDER_Y -= 90 #                 ""
-        # RARM_SHOULDER_Y *= -1 #Flipping sign to match robot
-        # LARM_SHOULDER_Y *= -1 #            ""
-        # if np.absolute(RARM_SHOULDER_Y) < 7: #deadzone for neutral position
-            # RARM_SHOULDER_Y = 0
-        # if np.absolute(LARM_SHOULDER_Y) < 7: #deadzone for neutral position
-            # LARM_SHOULDER_Y = 0
+        RARM_SHOULDER_Y += 90 #shifting angle to match neutral position
+        LARM_SHOULDER_Y -= 90 #                 ""
+        RARM_SHOULDER_Y *= -1 #Flipping sign to match robot
+        LARM_SHOULDER_Y *= -1 #            ""
+        if np.absolute(RARM_SHOULDER_Y) < 7: #deadzone for neutral position
+            RARM_SHOULDER_Y = 0
+        if np.absolute(LARM_SHOULDER_Y) < 7: #deadzone for neutral position
+            LARM_SHOULDER_Y = 0
         RARM_ELBOW_P -= 210 #shifting angle to match robot
         LARM_ELBOW_P -= 210 #            ""
         
@@ -447,8 +471,8 @@ class skelly:
         if RARM_SHOULDER_P > 19: RARM_SHOULDER_P = 19
         if RARM_SHOULDER_R < -89: RARM_SHOULDER_R = -89
         if RARM_SHOULDER_R > 0: RARM_SHOULDER_R = 0
-        if RARM_SHOULDER_Y < -360: RARM_SHOULDER_Y = -360
-        if RARM_SHOULDER_Y > 360: RARM_SHOULDER_Y = 360
+        if RARM_SHOULDER_Y < -35: RARM_SHOULDER_Y = -35
+        if RARM_SHOULDER_Y > 10: RARM_SHOULDER_Y = 10
         if RARM_ELBOW_P < -180: RARM_ELBOW_P = -180
         if RARM_ELBOW_P > 0: RARM_ELBOW_P = 0
         if RARM_WRIST_Y < -360: RARM_WRIST_Y = -360
@@ -461,8 +485,8 @@ class skelly:
         if LARM_SHOULDER_P > 19: LARM_SHOULDER_P = 19
         if LARM_SHOULDER_R < 0: LARM_SHOULDER_R = 0
         if LARM_SHOULDER_R > 89: LARM_SHOULDER_R = 89
-        if LARM_SHOULDER_Y < -360: LARM_SHOULDER_Y = -360
-        if LARM_SHOULDER_Y > 360: LARM_SHOULDER_Y = 360
+        if LARM_SHOULDER_Y < -10: LARM_SHOULDER_Y = -10
+        if LARM_SHOULDER_Y > 35: LARM_SHOULDER_Y = 35
         if LARM_ELBOW_P < -180: LARM_ELBOW_P = -180
         if LARM_ELBOW_P > 0: LARM_ELBOW_P = 0
         if LARM_WRIST_Y < -360: LARM_WRIST_Y = -360
@@ -471,8 +495,8 @@ class skelly:
         if LARM_WRIST_P > 25: LARM_WRIST_P = 25
         if LARM_WRIST_R < -80: LARM_WRIST_R = -80
         if LARM_WRIST_R > 40: LARM_WRIST_R = 40
-        if WAIST_Y < -360: WAIST_Y = -360
-        if WAIST_Y > 360: WAIST_Y = 360
+        if WAIST_Y < -45: WAIST_Y = -45
+        if WAIST_Y > 45: WAIST_Y = 45
         # if WAIST_P < -9: WAIST_P = -9
         # if WAIST_P > 39: WAIST_P = 39
         if WAIST_R < -7: WAIST_R = -7
@@ -484,39 +508,50 @@ class skelly:
         if HEAD_R < -20: HEAD_R = -20
         if HEAD_R > 20: HEAD_R = 20 
 
+
+        #average out values controlled by skeleton tracking:
+        jointlist = [   WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
+                        R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
+                        L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R]
+        jointlist = self.average_out(jointlist)
+        WAIST_Y,RARM_SHOULDER_P,RARM_SHOULDER_R,RARM_SHOULDER_Y,RARM_ELBOW_P,RARM_WRIST_P,RARM_WRIST_R,RARM_WRIST_Y,\
+        R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
+        L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R = jointlist
+
+
+
+        #control head rotation with joystick
         mouse_rel = pygame.mouse.get_rel()
-        if self.mouse8down:
-            if mouse_rel[0] > 0:
+        if self.mouse8down and self.play:
+            if mouse_rel[0] < 0:
                 if self.headrot < 45:
                     self.headrot += 5
-            elif mouse_rel[0] < 0:
+            elif mouse_rel[0] > 0:
                 if self.headrot > -45:
                     self.headrot -= 5
-            elif mouse_rel[0] == 0:
-                if self.headrot > 0:
-                    self.headrot -= 5
-                elif self.headrot < 0:
-                    self.headrot += 5
-        else:
+
+        elif self.play:
             if self.headrot > 0:
                 self.headrot -= 5
             elif self.headrot < 0:
                 self.headrot += 5
         HEAD_Y = self.headrot
+        
         # print(HEAD_Y)
 
-        if self.mouse1down:
+        #function for ojigi button.
+        if self.mouse1down and self.play:
             if self.bowpos[0] < 26:
                 self.bowpos[0] += 2
             if self.bowpos[1] < 20:
                 self.bowpos[1] += 2
-        else:
+        elif self.play:
             if self.bowpos[0] > 0:
                 self.bowpos[0] -= 2
             if self.bowpos[1] > 0:
                 self.bowpos[1] -= 2
         HEAD_P, WAIST_P = self.bowpos[0], self.bowpos[1]
-
+        # print(HEAD_P, WAIST_P)
             
 
 
@@ -760,6 +795,19 @@ class skelly:
                 #         "waist p: "+str(WAIST_P)+"\n"+\
                 #         "waist r: "+str(WAIST_R)+"\n")
 
+    def average_out(self,jointlist):
+        self.averagelist.pop()
+        jl = list(jointlist)
+        self.averagelist.insert(0,jl)
+        for j in self.averagelist:
+            if j == None:
+                return jointlist
+        for i in range(len(jointlist)):
+            jointlist[i] = 0
+            for joints in self.averagelist:
+                jointlist[i] += joints[i]
+            jointlist[i] /= len(self.averagelist)
+        return jointlist
 
     def none_to_zero(self, jointlist):
         for i, joint in enumerate(jointlist):
@@ -889,7 +937,7 @@ def main(args):
                 sk.screenprint("Press 'Esc', 'Q' or 'Ctrl' button to exit.", sk.surface,1)
                 for event in pygame.event.get():
                     if event.type == pygame.KEYDOWN:
-                        if event.scancode == 24 or event.scancode == 9 or event.scancode == 37:
+                        if event.scancode == 24 or event.scancode == 9 or event.scancode == 37 or event.scancode == 147:
                             sk.screenprint("QUITTING", sk.surface,11)
                             sk.running = False
                         else: sk.screenprint(str(event.scancode), sk.surface,12)
