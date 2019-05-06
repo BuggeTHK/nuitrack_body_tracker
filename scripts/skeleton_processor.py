@@ -19,7 +19,7 @@ from std_msgs.msg import Header
 import message_filters
 import commands
 
-JOINT_STATE_SIM = True
+JOINT_STATE_SIM = False
 
 
 class skelly:
@@ -27,12 +27,12 @@ class skelly:
     def __init__(self):
         # self.image_pub = rospy.Publisher("/skeleton_projection",Image, queue_size=10)
         if not JOINT_STATE_SIM:
-            self.master_pub = rospy.Publisher("master_states", JointState, queue_size=1)
+            self.master_pub = rospy.Publisher("/mechaless_master_states", JointState, queue_size=1)
             self.master_state_ = JointState()
             self.master_state_.header = Header()
             self.master_state_.header.frame_id = "master_base"
-            self.master_state_.name = [""] * 17
-            self.master_state_.position = [0] * 17 
+            self.master_state_.name = [""] * 20
+            self.master_state_.position = [0] * 20 
             self.master_state_.name[0] = "waist_y"
             self.master_state_.name[1] = "r_shoulder_p"
             self.master_state_.name[2] = "r_shoulder_r"
@@ -50,6 +50,9 @@ class skelly:
             self.master_state_.name[14] = "l_wrist_p"
             self.master_state_.name[15] = "l_wrist_r"
             self.master_state_.name[16] = "l_hand"
+            self.master_state_.name[17] = "neck_y"
+            self.master_state_.name[18] = "neck_p"
+            self.master_state_.name[19] = "waist_p"
         else:
             self.joint_state_publisher_ = rospy.Publisher("upper_joint_states", JointState, queue_size=1)
             self.joint_state_ = JointState()
@@ -95,7 +98,9 @@ class skelly:
         self.fontpath = "/etc/alternatives/fonts-japanese-gothic.ttf"
         self.skelly_sub = rospy.Subscriber("/body_tracker/skeleton", Skeleton, self.callback)
         self.image_sub = rospy.Subscriber("/camera/color/image", Image, self.image_callback)
-
+        
+        self.test_master_sub = rospy.Subscriber("/master_states", JointState, self.test_master_callback)
+        
         self.prev_neck_angle = None
         self.prev_left_shoulder_angle = None
         self.prev_left_elbow_angle = None
@@ -122,7 +127,6 @@ class skelly:
         self.surface = None 
 
         pygame.mouse.set_visible(False)
-        # pygame.event.set_grab(True)
         self.Rdown = False
 
         #checks to see if we've timed out
@@ -134,7 +138,7 @@ class skelly:
         #head value set by hand-controller
         self.headrot = 0
         self.headrot2 = 0
-        #bow motion controller by user
+        #bow motion controlled by user
         self.bowpos = [0, 0]
 
         #is mouse button 8 and 1 depressed
@@ -146,8 +150,16 @@ class skelly:
         self.fpscounter = 0
         self.second = 0
 
-        self.averaging_length = 17 #3 is recommended
+        self.averaging_length = 5 #3 is recommended
         self.averagelist = [None] * self.averaging_length
+
+        self.lefthandopen = False
+        self.righthandopen = False
+
+
+    def test_master_callback(self,data):
+        print(data)
+
 
     def screenprint(self, message, surface, pos):
         font = pygame.font.Font(None, 20)
@@ -195,7 +207,12 @@ class skelly:
 
             for event in pygame.event.get():
                 self.surface.fill((0,0,0))
-                if event.type == pygame.KEYDOWN:
+                if event.type == pygame.KEYUP:
+                    pass
+                    # if event.scancode == 173: 
+                    #     self.screenprint("a: UP, 173 (repeats)", self.surface,7)
+                    #     self.Rdown = False
+                elif event.type == pygame.KEYDOWN:
                     if event.scancode == 180: 
                         self.screenprint("start: 180 (repeats)", self.surface,3)
                         if not pygame.event.get_grab():
@@ -519,13 +536,20 @@ class skelly:
         R_HAND,LARM_SHOULDER_P,LARM_SHOULDER_R,LARM_SHOULDER_Y,LARM_ELBOW_P,LARM_WRIST_P,LARM_WRIST_R,LARM_WRIST_Y,\
         L_HAND,HEAD_P,HEAD_R,HEAD_Y,WAIST_P,WAIST_R = jointlist
 
+        #set hand values
+
+        if self.lefthandopen:
+            L_HAND = 51
+        else:
+            L_HAND = 49
+        if self.righthandopen:
+            R_HAND = -49
+        else:
+            R_HAND = -51
 
 
         #control head rotation with joystick
         mouse_rel = pygame.mouse.get_rel()
-        print(mouse_rel)
-        print(self.headrot2)
-        print(self.headrot)
         if self.mouse8down and self.play:
             if mouse_rel[0] < -50:
                 if self.headrot < 45:
@@ -588,8 +612,6 @@ class skelly:
                     self.screenprint("back(trigger): 8 (no repeat)", self.surface,2)
                     self.Rdown = False
                     self.mouse8down = True
-                    # print(mouse_rel)
-                    # print(pygame.mouse.get_rel())
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     self.screenprint("click(trigger) UP: 1 (no repeat)", self.surface,1)
@@ -599,8 +621,14 @@ class skelly:
                     self.mouse8down = False
             elif event.type == pygame.MOUSEMOTION:
                 self.screenprint('mouse movement: ' + str(event.rel), self.surface,0)
-                # print(str(pygame.key.get_pressed()))
-
+            
+            elif event.type == pygame.KEYUP:
+                if event.scancode == 173: 
+                    self.screenprint("a: UP, 173 (repeats)", self.surface,7)
+                    self.lefthandopen = not self.lefthandopen
+                elif event.scancode == 171: 
+                    self.screenprint("y: UP, 171 (repeats)", self.surface,6)    
+                    self.righthandopen = not self.righthandopen
             elif event.type == pygame.KEYDOWN:
                 if event.scancode == 180: 
                     self.screenprint("start: 180 (repeats)", self.surface,3)
@@ -608,14 +636,10 @@ class skelly:
                         pygame.event.set_grab(True)
                         self.screenprint("GRAB: on", self.surface,11)
                     else:
-                        if not self.play:
-                            self.play = True
-                        else:
-                            self.play = False
+                        self.play = not self.play
                     self.Rdown = False
                 elif event.scancode == 147: 
                     self.screenprint("select: 147 (repeats)", self.surface,4)
-                    # self.Rdown = False
                     if not pygame.event.get_grab() and self.Rdown:
                         self.screenprint("QUITTING", self.surface,11)
                         self.running = False
@@ -635,7 +659,6 @@ class skelly:
                     if self.Rdown:
                         pygame.event.set_grab(False)
                         self.screenprint("GRAB: off", self.surface,11)
-                        # self.Rdown = False
                 elif event.scancode == 123: 
                     self.screenprint("L(volume +): 123 (repeats)", self.surface,9)
                     self.Rdown = False
@@ -701,6 +724,9 @@ class skelly:
                 RARM_WRIST_Y *= -1
                 RARM_WRIST_P *= -1
 
+                HEAD_P *= -1
+
+
                 # print(  "master_waist: "+str(WAIST_Y)+"\n"+\
                 #         "master_rarm shoulder p: "+str(RARM_SHOULDER_P)+"\n"+\
                 #         "master_rarm shoulder r: "+str(RARM_SHOULDER_R)+"\n"+\
@@ -734,7 +760,7 @@ class skelly:
                 self.master_state_.position[5] = RARM_WRIST_Y
                 self.master_state_.position[6] = RARM_WRIST_P
                 self.master_state_.position[7] = RARM_WRIST_R
-                self.master_state_.position[8] = 0 #RARM_HAND
+                self.master_state_.position[8] = R_HAND
                 self.master_state_.position[9] = LARM_SHOULDER_P
                 self.master_state_.position[10] = LARM_SHOULDER_R
                 self.master_state_.position[11] = LARM_SHOULDER_Y
@@ -742,7 +768,10 @@ class skelly:
                 self.master_state_.position[13] = LARM_WRIST_Y
                 self.master_state_.position[14] = LARM_WRIST_P
                 self.master_state_.position[15] = LARM_WRIST_R
-                self.master_state_.position[16] = 0 #LARM_HAND
+                self.master_state_.position[16] = L_HAND
+                self.master_state_.position[17] = HEAD_Y
+                self.master_state_.position[18] = HEAD_P
+                self.master_state_.position[19] = WAIST_P
                 self.master_state_.header.stamp = rospy.Time.now()
                 self.master_pub.publish(self.master_state_)
 
