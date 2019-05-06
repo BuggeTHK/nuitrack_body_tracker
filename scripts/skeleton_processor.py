@@ -725,6 +725,7 @@ class skelly:
                 RARM_WRIST_P *= -1
 
                 HEAD_P *= -1
+                WAIST_Y *= -1
 
 
                 # print(  "master_waist: "+str(WAIST_Y)+"\n"+\
