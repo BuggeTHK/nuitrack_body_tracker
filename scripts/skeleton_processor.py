@@ -150,7 +150,7 @@ class skelly:
         self.fpscounter = 0
         self.second = 0
 
-        self.averaging_length = 5 #3 is recommended
+        self.averaging_length = 4 #3 is recommended
         self.averagelist = [None] * self.averaging_length
 
         self.lefthandopen = False
@@ -725,7 +725,7 @@ class skelly:
                 RARM_WRIST_P *= -1
 
                 HEAD_P *= -1
-                WAIST_Y *= -1
+                HEAD_Y *= -1
 
 
                 # print(  "master_waist: "+str(WAIST_Y)+"\n"+\

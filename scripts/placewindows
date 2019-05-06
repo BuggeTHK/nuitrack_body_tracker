@@ -1,0 +1,8 @@
+#!/usr/bin/xdotool
+
+search --all --onlyvisible --name "camera_output"
+windowmove %1 0 0
+windowraise %1
+search --all --onlyvisible --name "Controller Input"
+windowmove %1 0 580
+windowraise %1
