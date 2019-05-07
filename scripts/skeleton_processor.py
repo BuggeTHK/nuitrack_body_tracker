@@ -281,7 +281,7 @@ class skelly:
             self.second = time.time()
         else:
             self.fpscounter += 1
-        image = self.unicode_draw(image, "FPS: " + str(self.fps), 32, self.fontpath, (750,0), (255,0,0,0))
+        image = self.unicode_draw(image, "FPS: " + str(self.fps), 32, self.fontpath, (700,0), (255,0,0,0))
         
         if self.play:
             image = self.unicode_draw(image, u"実行", 32, self.fontpath, (765,425), (0,255,0,0))
