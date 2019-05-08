@@ -3,7 +3,9 @@
         "*.ipp": "cpp",
         "bitset": "cpp",
         "deque": "cpp",
-        "vector": "cpp"
+        "vector": "cpp",
+        "typeindex": "cpp",
+        "typeinfo": "cpp"
     },
     "python.pythonPath": "/usr/bin/python"
 }

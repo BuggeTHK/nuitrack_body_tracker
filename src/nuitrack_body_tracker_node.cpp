@@ -185,83 +185,83 @@ namespace nuitrack_body_tracker
 
     void onNewDepthFrame(DepthFrame::Ptr frame)
     {
-      //ROS_INFO("DBG: Nuitrack::onNewDepthFrame(), Frame = %d", ++depth_frame_number_);
+    //   //ROS_INFO("DBG: Nuitrack::onNewDepthFrame(), Frame = %d", ++depth_frame_number_);
 
-      if(!ENABLE_PUBLISHING_FRAMES)
-      {
-        return;
-      }
+    //   if(!ENABLE_PUBLISHING_FRAMES)
+    //   {
+    //     return;
+    //   }
 
-      int _width = frame->getCols(); 
-      int _height = frame->getRows();
-      const uint16_t* depthPtr = frame->getData();
+    //   int _width = frame->getCols(); 
+    //   int _height = frame->getRows();
+    //   const uint16_t* depthPtr = frame->getData();
 
-      //std::cout << "DBG DEPTH:  Width = " << _width << " Height = " << _height << std::endl;
+    //   //std::cout << "DBG DEPTH:  Width = " << _width << " Height = " << _height << std::endl;
 
 
-      // Depth image message
-      sensor_msgs::Image depth_msg;
-      depth_msg.header.stamp = ros::Time::now();
-      depth_msg.header.frame_id = camera_depth_frame_;
-      depth_msg.height = _height; 
-      depth_msg.width = _width; 
-      depth_msg.encoding = "rgb8";  // see sensor_msgs::image_encodings
-      depth_msg.is_bigendian = false;
-      depth_msg.step = 3 * _width; // sensor_msgs::ImagePtr row step size
+    //   // Depth image message
+    //   sensor_msgs::Image depth_msg;
+    //   depth_msg.header.stamp = ros::Time::now();
+    //   depth_msg.header.frame_id = camera_depth_frame_;
+    //   depth_msg.height = _height; 
+    //   depth_msg.width = _width; 
+    //   depth_msg.encoding = "rgb8";  // see sensor_msgs::image_encodings
+    //   depth_msg.is_bigendian = false;
+    //   depth_msg.step = 3 * _width; // sensor_msgs::ImagePtr row step size
       
 
-      // Point Cloud message
-      sensor_msgs::PointCloud2Iterator<float> out_x(cloud_msg_, "x");
-      sensor_msgs::PointCloud2Iterator<float> out_y(cloud_msg_, "y");
-      sensor_msgs::PointCloud2Iterator<float> out_z(cloud_msg_, "z");
+    //   // Point Cloud message
+    //   sensor_msgs::PointCloud2Iterator<float> out_x(cloud_msg_, "x");
+    //   sensor_msgs::PointCloud2Iterator<float> out_y(cloud_msg_, "y");
+    //   sensor_msgs::PointCloud2Iterator<float> out_z(cloud_msg_, "z");
       
-     // std::cout << "=========================================================" << std::endl;
-      //std::cout << "DEBUG: cloud x, y, z : world x, y, z " << std::endl;
+    //  // std::cout << "=========================================================" << std::endl;
+    //   //std::cout << "DEBUG: cloud x, y, z : world x, y, z " << std::endl;
 
-      for (size_t row = 0; row < _height; ++row)
-      {
-        for (size_t col = 0; col < _width; ++col )
-        {
-          uint16_t fulldepthValue = *(depthPtr+ col);
-          uint16_t depthValue = *(depthPtr+ col) >> 5;
+    //   for (size_t row = 0; row < _height; ++row)
+    //   {
+    //     for (size_t col = 0; col < _width; ++col )
+    //     {
+    //       uint16_t fulldepthValue = *(depthPtr+ col);
+    //       uint16_t depthValue = *(depthPtr+ col) >> 5;
           
 
-          // RGB are all the same for depth (monochrome)
-          depth_msg.data.push_back(depthValue); 
-          depth_msg.data.push_back(depthValue);
-          depth_msg.data.push_back(depthValue);
+    //       // RGB are all the same for depth (monochrome)
+    //       depth_msg.data.push_back(depthValue); 
+    //       depth_msg.data.push_back(depthValue);
+    //       depth_msg.data.push_back(depthValue);
           
           
-          //store xyz in point cloud, transforming from image coordinates, (Z Forward to X Forward)
-          Vector3 cloud_point = depthSensor_->convertProjToRealCoords(col, row, fulldepthValue );
+    //       //store xyz in point cloud, transforming from image coordinates, (Z Forward to X Forward)
+    //       Vector3 cloud_point = depthSensor_->convertProjToRealCoords(col, row, fulldepthValue );
           
-          float X_World = cloud_point.x / 1000.0; // mm to meters
-          float Y_World = cloud_point.y / 1000.0;
-          float Z_World = cloud_point.z / 1000.0; 
+    //       float X_World = cloud_point.x / 1000.0; // mm to meters
+    //       float Y_World = cloud_point.y / 1000.0;
+    //       float Z_World = cloud_point.z / 1000.0; 
           
-          *out_x = Z_World;
-          *out_y = -X_World;
-          *out_z = Y_World; 
-          ++out_x;
-          ++out_y;
-          ++out_z;
+    //       *out_x = Z_World;
+    //       *out_y = -X_World;
+    //       *out_z = Y_World; 
+    //       ++out_x;
+    //       ++out_y;
+    //       ++out_z;
 
-        }
-        depthPtr += _width; // Next row
-      }
+    //     }
+    //     depthPtr += _width; // Next row
+    //   }
 
-      // Publish depth frame
-      depth_image_pub_.publish(depth_msg);
+    //   // Publish depth frame
+    //   depth_image_pub_.publish(depth_msg);
 
-      // Publish colorized depth cloud
-      cloud_msg_.header.stamp = ros::Time::now();
-      depth_cloud_pub_.publish(cloud_msg_);
+    //   // Publish colorized depth cloud
+    //   cloud_msg_.header.stamp = ros::Time::now();
+    //   depth_cloud_pub_.publish(cloud_msg_);
      
     }
 
     void onUserUpdate(tdv::nuitrack::UserFrame::Ptr frame)
     {
-      // std::cout << "Nuitrack: onUserUpdate callback" << std::endl;
+    //   std::cout << "Nuitrack: onUserUpdate callback" << std::endl;
     }
 
 
@@ -1024,50 +1024,50 @@ namespace nuitrack_body_tracker
         body_tracking_skeleton_pub_.publish(skeleton_data); // full skeleton data
 
         // Msg with array of position data for each person detected
-        body_tracker_array_msg.detected_list.push_back(person_data); 
+        // body_tracker_array_msg.detected_list.push_back(person_data); 
 
 
         // Publish skeleton markers
 
-        // PublishMarker(  // show marker at KEY_JOINT_TO_TRACK location
-        //   1, // ID
-        //   person_data.position3d.x, 
-        //   person_data.position3d.y, 
-        //   person_data.position3d.z, 
-        //   1.0, 0.0, 0.0 ); // r,g,b
+        PublishMarker(  // show marker at KEY_JOINT_TO_TRACK location
+          1, // ID
+          person_data.position3d.x, 
+          person_data.position3d.y, 
+          person_data.position3d.z, 
+          1.0, 0.0, 0.0 ); // r,g,b
 
-        // PublishMarker(
-        //   3, // ID
-        //   skeleton_data.joint_position_head_real.x,
-        //   skeleton_data.joint_position_head_real.y,
-        //   skeleton_data.joint_position_head_real.z,
-        //   0.7, 0.0, 0.7 ); // r,g,b
+        PublishMarker(
+          3, // ID
+          skeleton_data.joint_position_head_real.x,
+          skeleton_data.joint_position_head_real.y,
+          skeleton_data.joint_position_head_real.z,
+          0.7, 0.0, 0.7 ); // r,g,b
 
-        // PublishMarker(
-        //   4, // ID
-        //   skeleton_data.joint_position_left_collar_real.x,
-        //   skeleton_data.joint_position_left_collar_real.y,
-        //   skeleton_data.joint_position_left_collar_real.z,
-        //   0.0, 0.0, 1.0 ); // r,g,b
+        PublishMarker(
+          4, // ID
+          skeleton_data.joint_position_left_collar_real.x,
+          skeleton_data.joint_position_left_collar_real.y,
+          skeleton_data.joint_position_left_collar_real.z,
+          0.0, 0.0, 1.0 ); // r,g,b
 
-        // PublishMarker(
-        //   5, // ID
-        //   skeleton_data.joint_position_torso_real.x,
-        //   skeleton_data.joint_position_torso_real.y,
-        //   skeleton_data.joint_position_torso_real.z,
-        //   0.0, 1.0, 0.0 ); // r,g,b
+        PublishMarker(
+          5, // ID
+          skeleton_data.joint_position_torso_real.x,
+          skeleton_data.joint_position_torso_real.y,
+          skeleton_data.joint_position_torso_real.z,
+          0.0, 1.0, 0.0 ); // r,g,b
 
       }
 
       ////////////////////////////////////////////////////
       // Publish custom array message with position info for all people found
-      body_tracking_array_pub_.publish(body_tracker_array_msg);
+      // body_tracking_array_pub_.publish(body_tracker_array_msg);
     }
 
 
     void onHandUpdate(HandTrackerData::Ptr handData)
     {
-      // std::cout << "Nuitrack: onHandUpdate callback" << std::endl;
+    //   // std::cout << "Nuitrack: onHandUpdate callback" << std::endl;
     }
 
 

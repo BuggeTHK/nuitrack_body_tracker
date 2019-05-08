@@ -150,7 +150,7 @@ class skelly:
         self.fpscounter = 0
         self.second = 0
 
-        self.averaging_length = 4 #3 is recommended
+        self.averaging_length = 10 #0.5s of frames is recommended
         self.averagelist = [None] * self.averaging_length
 
         self.lefthandopen = False
@@ -551,19 +551,18 @@ class skelly:
         #control head rotation with joystick
         mouse_rel = pygame.mouse.get_rel()
         if self.mouse8down and self.play:
-            if mouse_rel[0] < -50:
+            if mouse_rel[0] < -25:
                 if self.headrot < 45:
                     self.headrot += 5
-            elif mouse_rel[0] > 50:
+            elif mouse_rel[0] > 25:
                 if self.headrot > -45:
                     self.headrot -= 5
-            if mouse_rel[1] < -50:
+            if mouse_rel[1] < -25:
                 if self.headrot2 < 15:
                     self.headrot2 += 5
-            elif mouse_rel[1] > 50:
+            elif mouse_rel[1] > 25:
                 if self.headrot2 > -10:
                     self.headrot2 -= 5
-
         elif self.play:
             if self.headrot > 0:
                 self.headrot -= 5
@@ -580,14 +579,14 @@ class skelly:
         #function for ojigi button.
         if self.mouse1down and self.play:
             if self.bowpos[0] < 26:
-                self.bowpos[0] += 2
+                self.bowpos[0] += 1
             if self.bowpos[1] < 20:
-                self.bowpos[1] += 2
+                self.bowpos[1] += 1
         elif self.play:
             if self.bowpos[0] > 0:
-                self.bowpos[0] -= 2
+                self.bowpos[0] -= 1
             if self.bowpos[1] > 0:
-                self.bowpos[1] -= 2
+                self.bowpos[1] -= 1
         
         if self.headrot2 == 0:        
             HEAD_P = self.bowpos[0]
