@@ -10,6 +10,17 @@
 ### コントローラ：
 <img src="https://user-images.githubusercontent.com/31090954/57671786-3b8bf500-7650-11e9-9f0b-e32e67a95f02.png" width="600" height="600">
 
+### Bluetooth：
+```
+bluetoothctl
+```
+で使用するアダプターとコントローラをペアリング。
+内蔵BTアダプターをパソコン起動時にオフにするには
+```
+~/ros/kinetic/src/nuitrack_body_tracker/scripts/bringup.sh
+```
+
+
 # Nuitrack Body Tracker
 
 # Info
