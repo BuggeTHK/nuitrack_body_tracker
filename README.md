@@ -1,6 +1,14 @@
 # メカレスマスター
-![controller_w_legend](https://user-images.githubusercontent.com/31090954/57671786-3b8bf500-7650-11e9-9f0b-e32e67a95f02.png)
+### インストール：
+以下のNuitrack Body TrackerのInstallation Instructionsを参照。
 
+### 起動方法：
+```
+~/ros/kinetic/src/nuitrack_body_tracker/scripts/bringup.sh
+```
+
+### コントローラ：
+<img src="https://user-images.githubusercontent.com/31090954/57671786-3b8bf500-7650-11e9-9f0b-e32e67a95f02.png" width="600" height="600">
 
 # Nuitrack Body Tracker
 
