@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Exec=~/ros/kinetic/src/nuitrack_body_tracker/scripts/bringup.sh
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name[en_US]=Internal Bluetooth off. 
+Name=Internal Bluetooth off. 
+Comment[en_US]=Shutdown internal bluetooth. 
+Comment=Shutdown internal bluetooth. 
