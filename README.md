@@ -15,10 +15,16 @@
 bluetoothctl
 ```
 で使用するアダプターとコントローラをペアリング。
+
 内蔵BTアダプターをパソコン起動時にオフにするには
 ```
-~/ros/kinetic/src/nuitrack_body_tracker/scripts/bringup.sh
+gedit ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh
 ```
+を実行、アダプタID（08:D4:0C:3D:6D:18）をオフにしたいアダプターのIDに変えます。
+```
+cp ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh.desktop ~/.config/autostart/bluetoothpowerdown.sh.desktop
+```
+上記を実行して、スクリプトを起動時に実行させます。
 
 
 # Nuitrack Body Tracker
