@@ -8,8 +8,7 @@
 ```
 
 ### コントローラ：
-<img src="https://user-images.githubusercontent.com/31090954/57671786-3b8bf500-7650-11e9-9f0b-e32e67a95f02.png" width="600" height="600">
- - 注意：上記のキャプチャ解除のボタンの順番は間違っています。２，１を入れ替えてください。
+<img src="https://user-images.githubusercontent.com/31090954/57743704-17d4b780-7701-11e9-804a-5f8e8fe16443.png" width="600" height="600">
 
 ### Bluetooth：
 ```
