@@ -25,7 +25,12 @@ gedit ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh
 cp ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh.desktop ~/.config/autostart/bluetoothpowerdown.sh.desktop
 ```
 上記を実行して、スクリプトを起動時に実行させます。
-
+# FPSの動きのスムージング   
+  skeleton_processor.py #153
+  ```
+  self.averaging_length = 10 #0.5s of frames is recommended example for 20fps
+  ```
+  
 
 # Nuitrack Body Tracker
 
