@@ -122,7 +122,9 @@ cp ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh.desktop
   - Try the license tool, it will test the system:
     - sudo -E nuitrack_license_tool
     - click on "compatibility test"
+      →何かしら表示されたらOK.
     - if you have a license, enter it after the test completes.
+      →"Get available Licenses"の横にライセンス番号を入力して、"Get available Licenses"を押す
 
   - Follow instructions at: ~/sdk/NuitrackSDK/Examples/nuitrack_gl_sample/README.txt
 
