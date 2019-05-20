@@ -70,7 +70,13 @@ cp ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh.desktop
 ### Summary instructions below, but bits might not be up to date!  Go to the website to get the latest SDK.
 
 
-  - Clone body_tracker_msgs into your Catkin workspace 
+  - Clone body_tracker_msgs into your Catkin workspace and build as below:     
+    ```
+    roscd 
+    cd ../src
+    git clone https://github.com/hi-kondo/body_tracker_msgs
+    catkin build body_tracker_msgs
+    ```
     - catkin_make to confirm complies OK
 
   - Clone this project into your Catkin workspace
