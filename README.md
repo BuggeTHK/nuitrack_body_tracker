@@ -1,6 +1,10 @@
 # メカレスマスター
 ### インストール：
 以下のNuitrack Body TrackerのInstallation Instructionsを参照。
+下記コマンドでpythonモジュールをインストールする必要あり
+```
+sudo apt-get install python-pygame
+```
 
 ### 起動方法：
 ```
@@ -79,8 +83,6 @@ cp ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh.desktop
     ```
     - catkin_make to confirm complies OK
 
-  - Clone this project into your Catkin workspace
-  
   - Remove OpenNI - it conflicts with the version supplied by Nuitrack!
     -   sudo apt-get purge --auto-remove openni-utils
 
@@ -103,7 +105,14 @@ cp ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh.desktop
     - extract ZIP archive with ubuntu Archive Manager (double click the zip file)
     - delete the zip file
 
-  - Edit CMakeLists.txt if you installed the SDK to a different location:
+  - Clone this project into your Catkin workspace
+    ```
+    roscd 
+    cd ../src
+    git clone https://github.com/hi-kondo/mechaless_master/edit/master/README.md
+    catkin build nuitrack_body_tracker
+    ```
+    - Edit CMakeLists.txt if you installed the SDK to a different location:    
     set(NUITRACK_SDK_PATH /home/system/sdk/NuitrackSDK)
 
 # NOTE: Nuitrack install may break other RealSense applications!
@@ -121,9 +130,9 @@ cp ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh.desktop
 
   - Try the license tool, it will test the system:
     - sudo -E nuitrack_license_tool
-    - click on "compatibility test"
+    - click on "compatibility test"    
       →何かしら表示されたらOK.
-    - if you have a license, enter it after the test completes.
+    - if you have a license, enter it after the test completes.    
       →"Get available Licenses"の横にライセンス番号を入力して、"Get available Licenses"を押す
 
   - Follow instructions at: ~/sdk/NuitrackSDK/Examples/nuitrack_gl_sample/README.txt
