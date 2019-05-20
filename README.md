@@ -1,9 +1,10 @@
 # メカレスマスター
 ### インストール：
-以下のNuitrack Body TrackerのInstallation Instructionsを参照。
-下記コマンドでpythonモジュールをインストールする必要あり
+以下のNuitrack Body TrackerのInstallation Instructionsを参照。    
+下記コマンドでツールをインストールする必要あり。
 ```
 sudo apt-get install python-pygame
+sudo apt-get install bluez-tools
 ```
 
 ### 起動方法：
@@ -137,6 +138,7 @@ cp ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh.desktop
 
   - Follow instructions at: ~/sdk/NuitrackSDK/Examples/nuitrack_gl_sample/README.txt
 
-
-
+# ボタン配置を変えたい場合
+/scripts/skeleton_processor.pyの``event.scancode``の番号を変える    
+デバイスの各番号割り付けを知りたい場合はデバイスを繋いだ状態で``xinput test [device ID]``を実行する
 
