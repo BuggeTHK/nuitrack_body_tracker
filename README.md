@@ -98,8 +98,8 @@ cp ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh.desktop
 
   - Install Nuitrack SDK (NuitrackSDK.zip)
     - Download from: http://download.3divi.com/Nuitrack/
-    - mkdir ~/sdk/NuitrackSDK
-    - cp NuitrackSDK.zip ~/NuitrackSDK
+    - mkdir ~/sdk
+    - cp NuitrackSDK.zip ~/sdk
     - extract ZIP archive with ubuntu Archive Manager (double click the zip file)
     - delete the zip file
 
