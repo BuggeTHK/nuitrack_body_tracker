@@ -109,7 +109,7 @@ cp ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh.desktop
     ```
     roscd 
     cd ../src
-    git clone https://github.com/hi-kondo/mechaless_master/edit/master/README.md
+    git clone https://github.com/hi-kondo/mechaless_master
     catkin build nuitrack_body_tracker
     ```
     - Edit CMakeLists.txt if you installed the SDK to a different location:    
