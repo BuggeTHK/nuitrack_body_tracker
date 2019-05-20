@@ -85,8 +85,11 @@ cp ~/ros/kinetic/src/nuitrack_body_tracker/scripts/bluetoothpowerdown.sh.desktop
     -   sudo apt-get purge --auto-remove openni-utils
 
   - Download BOTH the nuitrack linux drivers and the Nuitrack SDK
-
+    - Download nuitrack-ubuntu-amd64.deb from [here](http://download.3divi.com/Nuitrack/doc/Installation_page.html) 
+    - ダウンロードしたフォルダ名を覚えておくこと!ドライバのインストール時に同フォルダでの作業が必須
+    
   - Install Nuitrack Linux drivers:
+    -   cd ~/Downloads/ #Default
     -   sudo dpkg -i nuitrack-ubuntu-amd64.deb
     -   sudo reboot
     -   confirm environment variables set correctly:
