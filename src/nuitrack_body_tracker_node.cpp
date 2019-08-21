@@ -1,31 +1,3 @@
-/* Body Tracker Node using Nuitrack library
-
-   Publish data messages:
-   
-   1. body_tracking_position_pub_ custom message:  <body_tracker_msgs::BodyTracker>
-   Includes:
-   2D position of person relative to head camera; allows for fast, smooth tracking
-     Joint.proj:  position in normalized projective coordinates
-     (x, y from 0.0 to 1.0, z is real)
-     Astra Mini FOV: 60 horz, 49.5 vert (degrees)
-     
-     body_tracking_array_pub_ : multiple person detections in one message
-
-   3D position of the person's neck joint in relation to robot (using TF)
-     Joint.real: position in real world coordinates
-     Useful for tracking person in 3D
-   
-   2. body_tracking_skeleton_pub_ custom message: <body_tracker_msgs::Skeleton>
-   Includes:
-   Everyting in BodyTracker message above, plus 3D position of upper body. 
-     joints in relation to robot (using TF)
-     Joint.real: position in real world coordinates
-
-   3. marker_pub_  message: <visualization_msgs::Marker>
-   Publishes 3d markers for selected joints.  Visible as markers in RVIZ
-
-*/
-
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "std_msgs/Int32.h"
@@ -45,10 +17,6 @@
 #include <body_tracker_msgs/BodyTracker.h>       // Publish custom message
 #include <body_tracker_msgs/BodyTrackerArray.h>  // Custom message, multiple people 
 #include <body_tracker_msgs/Skeleton.h>          // Publish custom message
-
-// If Camera mounted on Pan/Tilt head
-//#include "sensor_msgs/JointState.h"
-//#include "dynamixel_msgs/JointState.h"
 
 //For Nuitrack SDK
 #include "nuitrack/Nuitrack.h"
@@ -185,89 +153,14 @@ namespace nuitrack_body_tracker
 
     void onNewDepthFrame(DepthFrame::Ptr frame)
     {
-    //   //ROS_INFO("DBG: Nuitrack::onNewDepthFrame(), Frame = %d", ++depth_frame_number_);
-
-    //   if(!ENABLE_PUBLISHING_FRAMES)
-    //   {
-    //     return;
-    //   }
-
-    //   int _width = frame->getCols(); 
-    //   int _height = frame->getRows();
-    //   const uint16_t* depthPtr = frame->getData();
-
-    //   //std::cout << "DBG DEPTH:  Width = " << _width << " Height = " << _height << std::endl;
-
-
-    //   // Depth image message
-    //   sensor_msgs::Image depth_msg;
-    //   depth_msg.header.stamp = ros::Time::now();
-    //   depth_msg.header.frame_id = camera_depth_frame_;
-    //   depth_msg.height = _height; 
-    //   depth_msg.width = _width; 
-    //   depth_msg.encoding = "rgb8";  // see sensor_msgs::image_encodings
-    //   depth_msg.is_bigendian = false;
-    //   depth_msg.step = 3 * _width; // sensor_msgs::ImagePtr row step size
-      
-
-    //   // Point Cloud message
-    //   sensor_msgs::PointCloud2Iterator<float> out_x(cloud_msg_, "x");
-    //   sensor_msgs::PointCloud2Iterator<float> out_y(cloud_msg_, "y");
-    //   sensor_msgs::PointCloud2Iterator<float> out_z(cloud_msg_, "z");
-      
-    //  // std::cout << "=========================================================" << std::endl;
-    //   //std::cout << "DEBUG: cloud x, y, z : world x, y, z " << std::endl;
-
-    //   for (size_t row = 0; row < _height; ++row)
-    //   {
-    //     for (size_t col = 0; col < _width; ++col )
-    //     {
-    //       uint16_t fulldepthValue = *(depthPtr+ col);
-    //       uint16_t depthValue = *(depthPtr+ col) >> 5;
-          
-
-    //       // RGB are all the same for depth (monochrome)
-    //       depth_msg.data.push_back(depthValue); 
-    //       depth_msg.data.push_back(depthValue);
-    //       depth_msg.data.push_back(depthValue);
-          
-          
-    //       //store xyz in point cloud, transforming from image coordinates, (Z Forward to X Forward)
-    //       Vector3 cloud_point = depthSensor_->convertProjToRealCoords(col, row, fulldepthValue );
-          
-    //       float X_World = cloud_point.x / 1000.0; // mm to meters
-    //       float Y_World = cloud_point.y / 1000.0;
-    //       float Z_World = cloud_point.z / 1000.0; 
-          
-    //       *out_x = Z_World;
-    //       *out_y = -X_World;
-    //       *out_z = Y_World; 
-    //       ++out_x;
-    //       ++out_y;
-    //       ++out_z;
-
-    //     }
-    //     depthPtr += _width; // Next row
-    //   }
-
-    //   // Publish depth frame
-    //   depth_image_pub_.publish(depth_msg);
-
-    //   // Publish colorized depth cloud
-    //   cloud_msg_.header.stamp = ros::Time::now();
-    //   depth_cloud_pub_.publish(cloud_msg_);
-     
     }
 
     void onUserUpdate(tdv::nuitrack::UserFrame::Ptr frame)
     {
-    //   std::cout << "Nuitrack: onUserUpdate callback" << std::endl;
     }
-
 
     void onSkeletonUpdate(SkeletonData::Ptr userSkeletons)
     {
-      // std::cout << "Nuitrack: onSkeletonUpdate callback" << std::endl;
 
       // Message for array of body detections
       body_tracker_msgs::BodyTrackerArray  body_tracker_array_msg;
@@ -275,37 +168,226 @@ namespace nuitrack_body_tracker
       ros::Time frame_time_stamp = ros::Time::now();
       body_tracker_array_msg.header.stamp = frame_time_stamp;
 
-//      body_tracker_msgs::BodyTrackerArray_ 
-//        <body_tracker_msgs::BodyTrackerArray> foo; // body_tracker_array_msg;
-
 
       // process skeletons for each user found
       auto skeletons = userSkeletons->getSkeletons();
-      for (auto skeleton: skeletons)
-      {
+      float conf = 0.6;
+      int identify_point_w = -1;
+      int identify_point_d = -1;
+      int identify_point = 0;
+      float minimum = -1.0f;
+      double min_dist = 9999.0;
+      for (auto pre_skeleton: skeletons)
+      { 
+        float min_num = -1000.0f;
+        double dist;
         // std::cout << "Nuitrack: Skeleton.id = " << skeleton.id << std::endl;
 
         // Use KEY_JOINT_TO_TRACK to determine if we have a good lock on the person
-        float tracking_confidence = skeleton.joints[KEY_JOINT_TO_TRACK].confidence;
+        float tracking_confidence = pre_skeleton.joints[KEY_JOINT_TO_TRACK].confidence;
         if (tracking_confidence < 0.15)
         {
-          std::cout << "Nuitrack: ID " << skeleton.id << " Low Confidence (" 
+          std::cout << "Nuitrack: ID " << pre_skeleton.id << " Low Confidence (" 
             << tracking_confidence << "), skipping"  << std::endl;
           continue;  // assume none of the joints are valid 
         }
-
-
-        // Fill in message data from Nuitracker SDK data
-        // camera z,x,y coordinates are mapped to ROS x,y,z coordinates 
-        // All values are relative to camera position in meters (ie, in camera's TF frame)
-        // ROS x = camera z - distance to person
-        // ROS y = camera x - side to side
-        // ROS z = camera y - vertical height, *relative to camera position*
-
+        ///////////////////////////////////////////////////////////////
+        // Waist position filter program detect only one person.
+        if(waist_set == 1){
+          if(pre_skeleton.joints[JOINT_WAIST].confidence > conf){
+            dist = std::pow((pre_waist_position[0] - pre_skeleton.joints[JOINT_WAIST].proj.x),2.0)+ std::pow((pre_waist_position[1] - pre_skeleton.joints[JOINT_WAIST].proj.y),2.0);
+            if(min_dist > dist){
+              waist_position = {pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y};
+              min_dist = dist;
+              identify_point_w = pre_skeleton.id;
+            }
+            pre_waist_position = waist_position;
+            //printf("ID：%dの位置は{%f,%f}、移動距離は%fで、現最小移動位置は{%f,%f}、距離は%f、IDは%dで、waist_setは%dです\n",pre_skeleton.id,pre_skeleton.joints[JOINT_WAIST].proj.x,pre_skeleton.joints[JOINT_WAIST].proj.y,dist,waist_position[0],waist_position[1],min_dist,identify_point_w,waist_set);
+          }
+        }
+        ///////////////////////////////////////////////////////////////
+        // Depth filter program detect only one person.
+        if(min_dist>0.5 || waist_set == 0){
+        if(pre_skeleton.joints[JOINT_HEAD].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_HEAD].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_HEAD].proj.z){
+              min_num = pre_skeleton.joints[JOINT_HEAD].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_NECK].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_NECK].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_NECK].proj.z){
+              min_num = pre_skeleton.joints[JOINT_NECK].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_LEFT_COLLAR].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_LEFT_COLLAR].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_LEFT_COLLAR].proj.z){
+              min_num = pre_skeleton.joints[JOINT_LEFT_COLLAR].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_TORSO].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_TORSO].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_TORSO].proj.z){
+              min_num = pre_skeleton.joints[JOINT_TORSO].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_TORSO].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_TORSO].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_TORSO].proj.z){
+              min_num = pre_skeleton.joints[JOINT_TORSO].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_WAIST].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_WAIST].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_WAIST].proj.z){
+              min_num = pre_skeleton.joints[JOINT_WAIST].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_WAIST].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_WAIST].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_WAIST].proj.z){
+              min_num = pre_skeleton.joints[JOINT_WAIST].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_LEFT_SHOULDER].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_LEFT_SHOULDER].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_LEFT_SHOULDER].proj.z){
+              min_num = pre_skeleton.joints[JOINT_LEFT_SHOULDER].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_LEFT_ELBOW].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_LEFT_ELBOW].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_LEFT_ELBOW].proj.z){
+              min_num = pre_skeleton.joints[JOINT_LEFT_ELBOW].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_LEFT_WRIST].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_LEFT_WRIST].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_LEFT_WRIST].proj.z){
+              min_num = pre_skeleton.joints[JOINT_LEFT_WRIST].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_LEFT_HAND].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_LEFT_HAND].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_LEFT_HAND].proj.z){
+              min_num = pre_skeleton.joints[JOINT_LEFT_HAND].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_RIGHT_SHOULDER].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_RIGHT_SHOULDER].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_RIGHT_SHOULDER].proj.z){
+              min_num = pre_skeleton.joints[JOINT_RIGHT_SHOULDER].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_RIGHT_ELBOW].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_RIGHT_ELBOW].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_RIGHT_ELBOW].proj.z){
+              min_num = pre_skeleton.joints[JOINT_RIGHT_ELBOW].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_RIGHT_WRIST].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_RIGHT_WRIST].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_RIGHT_WRIST].proj.z){
+              min_num = pre_skeleton.joints[JOINT_RIGHT_WRIST].proj.z;
+            }
+          }
+        }
+        if(pre_skeleton.joints[JOINT_RIGHT_HAND].confidence > conf){
+          if(min_num == -1000.0f){
+            min_num = pre_skeleton.joints[JOINT_RIGHT_HAND].proj.z;
+          }
+          else{
+            if(min_num > pre_skeleton.joints[JOINT_RIGHT_HAND].proj.z){
+              min_num = pre_skeleton.joints[JOINT_RIGHT_HAND].proj.z;
+            }
+          }
+        }
+        if(minimum == -1.0f && min_num > 0){
+            minimum = min_num;
+            identify_point_d = pre_skeleton.id;
+        }
+        else{
+          if(minimum > min_num && min_num > 0){
+            minimum = min_num;
+            identify_point_d = pre_skeleton.id;
+          }
+        }
+        identify_point = identify_point_d;
+        pre_waist_position = {pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y};
+        //printf("ID：%dの最小値は%fで、現最小値は%f、IDは%dです\n",pre_skeleton.id,min_num,minimum,identify_point_d);
+      }
+      else{identify_point = identify_point_w;}
+      if(minimum != -1.0f && waist_set == 0){
+        pre_waist_position = {pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y};
+        waist_set = 1;
+        printf("初期腰はID：%dで、座標位置(%f, %f)、距離は%fです\n",identify_point_d,pre_waist_position[0],pre_waist_position[1],minimum);
+        }
+      }
+      //If minimum distance is not smaller than distance threshold, use depth filter
+      for (auto skeleton: skeletons)
+      {
+        if(skeleton.id != identify_point){
+          continue;
+        }
         ///////////////////////////////////////////////////////////////
         // Position data in 2D and 3D for tracking people
         body_tracker_msgs::BodyTracker person_data;
-//        body_tracker_msgs::BodyTracker_ <body_tracker_msgs::BodyTracker> person_data;
 
         person_data.body_id = skeleton.id;
         person_data.tracking_status = 0; // TODO
@@ -343,175 +425,11 @@ namespace nuitrack_body_tracker
           (skeleton.joints[KEY_JOINT_TO_TRACK].proj.y - 0.5) * ASTRA_MINI_FOV_Y;
         person_data.position2d.z = skeleton.joints[KEY_JOINT_TO_TRACK].proj.z / 1000.0;
 
-        
-        // std::cout << std::setprecision(4) << std::setw(7) 
-        //   << "Nuitrack: " << "2D Tracking"  
-        //   << " x: " << track2d.x 
-        //   << " y: " << track2d.y
-        //   << " ID: " << track2d.theta
-        //   << std::endl;
-
-
-
         ///////////////////////////////////////////////////////////////
         // Face Data
         // if the same ID as skeleton id, publish face data too
 
         std::string face_info = tdv::nuitrack::Nuitrack::getInstancesJson();
-        //std::cout << face_info; //This will print the entire json object.
-        // Good examples at: http://zenol.fr/blog/boost-property-tree/en.html
-
-        // try
-        // {
-        //   std::stringstream ss;
-        //   ss << face_info;
-        //   boost::property_tree::ptree root;
-        //   boost::property_tree::read_json(ss, root);
-
-        //   // Find all instances of objects (usually people)
-        //   for(boost::property_tree::ptree::value_type &instance : root.get_child("Instances"))
-        //   {
-        //     std::string json_id_str = "";
-        //     std::string json_class_str = "";
-        //     int json_id = -1;
-
-        //     for (boost::property_tree::ptree::value_type &found_object : instance.second)
-        //     {
-
-        //       if( "id" == found_object.first)
-        //       {
-        //         json_id_str = found_object.second.data();
-        //         json_id = found_object.second.get_value<int>();
-        //         std::cout << "FIELD: id = " << json_id_str << " = " << json_id << std::endl;
-
-        //       }
-        //       else if( "class" == found_object.first)
-        //       {
-        //         std::cout << "FIELD: class = " << found_object.second.data() << std::endl;
-        //         json_class_str = found_object.second.data();
-
-        //       }
-        //       else if( "face" == found_object.first)
-        //       {
-
-        //         // See if we found a face ID that matches current skeleton
-        //         //if( (json_class_str == "human") && (json_id_str != "") )
-        //         if( !( (json_class_str == "human") && (json_id == skeleton.id) ))
-        //         {
-        //           std::cout << "FACE ID (" << json_id << ") DOES NOT MATCH SKELETON (" <<
-        //             skeleton.id << ")... SKIPPING  (or object != Human?)" << std::endl;
-        //         }
-        //         else
-        //         {
-
-        //           boost::property_tree::ptree face = found_object.second; // subtree
-        //           if(face.empty()) 
-        //           {
-        //             std::cout << "Face tree is empty!" << std::endl;
-        //           }
-        //           else
-        //           {
-        //             // this is a face subtree
-        //             std::cout << "FACE FOUND " << std::endl;
-        //             person_data.face_found = true;
-        //             float face_left, face_top, face_width, face_height;
-        //             face_left = face_top = face_width = face_height = 0.0;
-
-        //             for(boost::property_tree::ptree::value_type &rectangle : face.get_child("rectangle"))
-        //             {
-        //               // Face bounding box from 0.0 -> 1.0 (from top left of image) 
-        //               // convert to pixel position before publishing              
-        //               std::string rec_name = rectangle.first;
-        //               std::string rec_val = rectangle.second.data();
-        //               //std::cout << "FACE RECTANGLE: " << rec_name << " : " << rec_val << std::endl;
-                      
-        //               if( rectangle.first == "left")
-        //               {
-        //                 face_left = rectangle.second.get_value<float>();
-        //                 person_data.face_left = (int)((float)frame_width_ * face_left);
-        //               }                      
-        //               if( rectangle.first == "top")
-        //               {
-        //                 face_top = rectangle.second.get_value<float>();
-        //                 person_data.face_top = (int)((float)frame_height_ * face_top);
-        //               }                      
-        //               if( rectangle.first == "width")
-        //               {
-        //                 face_width = rectangle.second.get_value<float>();
-        //                 person_data.face_width = (int)((float)frame_width_ * face_width);
-        //               }                      
-        //               if( rectangle.first == "height")
-        //               {
-        //                 face_height = rectangle.second.get_value<float>();
-        //                 person_data.face_height = (int)((float)frame_height_ * face_height);
-        //               }                      
-        //             }
-                    
-        //             // Get center of the face bounding box and convert projection to radians
-        //             // proj is 0.0 (left) --> 1.0 (right)
-                    
-        //             float face_center_proj_x = face_left + (face_width / 2.0);
-        //             float face_center_proj_y = face_top + (face_height / 2.0);
-        //             person_data.face_center.x = (face_center_proj_x - 0.5) * ASTRA_MINI_FOV_X;
-        //             person_data.face_center.y =  (face_center_proj_y - 0.5) * ASTRA_MINI_FOV_Y;
-        //             // just use the skeleton location 
-        //             person_data.face_center.z = skeleton.joints[JOINT_HEAD].real.z / 1000.0;
-                    
-        //             //std::cout << "DBG face_center_proj = " << face_center_proj_x << ", " <<
-        //             //  face_center_proj_y << std::endl;
-                      
-        //             //std::cout << "DBG face_center_ROS = " << person_data.face_center.x << ", " <<
-        //             //  person_data.face_center.y << std::endl;
-
-                    
-                    
-        //             for(boost::property_tree::ptree::value_type &angles : face.get_child("angles"))
-        //             {
-        //               // Face Angle (where the face is pointing)
-        //               std::string angles_key = angles.first;
-        //               std::string angles_val = angles.second.data();
-        //               //std::cout << "FACE ANGLES: " << angles_key << " : " << angles_val << std::endl;
-        //               // Not currently published for ROS (future)
-
-        //             }
-        //             for(boost::property_tree::ptree::value_type &age : face.get_child("age"))
-        //             {
-        //               // rectangle is set of std::pair
-        //               std::string age_key = age.first;
-        //               std::string age_val = age.second.data();
-        //               std::cout << "FACE AGE: " << age_key << " : " << age_val << std::endl;
-                      
-        //               if( age.first == "years")
-        //               {
-        //                 float float_age = age.second.get_value<float>();
-        //                 person_data.age = (int)float_age;
-        //               }                      
-
-        //             }
-
-        //             std::string gender_val = face.get<std::string>("gender");
-        //             std::cout << "GENDER: " << gender_val << std::endl;
-        //             if("male" == gender_val)
-        //             {
-        //               person_data.gender = 1;
-        //             }
-        //             else if("female" == gender_val)
-        //             {
-        //               person_data.gender = 2;
-        //             }
-
-        //           }
-        //         }
-        //       }
-        //     }
-        //   }
-        // }
-        // catch (std::exception const& e)
-        // {
-        //   std::cerr << e.what() << std::endl;
-        // }
-
-
         ///////////////////////////////////////////////////////////////
         // Skeleton Data for publishing more detail
         body_tracker_msgs::Skeleton_ <body_tracker_msgs::Skeleton> skeleton_data;
@@ -520,9 +438,6 @@ namespace nuitrack_body_tracker
         skeleton_data.body_id = skeleton.id;
         skeleton_data.tracking_status = 0; // TODO
 
-        //skeleton_data.centerOfMass.x = 0.0;
-        //skeleton_data.centerOfMass.y = 0.0;
-        //skeleton_data.centerOfMass.z = 0.0;
 
         // *** POSITION 3D ***
         person_data.position3d.x = skeleton.joints[KEY_JOINT_TO_TRACK].real.z / 1000.0;
@@ -984,22 +899,6 @@ namespace nuitrack_body_tracker
         skeleton_data.joint_orientation3_right_elbow.z = -9999;          
         }
 
-        // Hand:  open (0), grasping (1), waving (2)
-        /* TODO - see which of these actually work
-        GESTURE_WAVING          = 0,
-        GESTURE_SWIPE_LEFT      = 1,
-        GESTURE_SWIPE_RIGHT     = 2,
-        GESTURE_SWIPE_UP        = 3,
-        GESTURE_SWIPE_DOWN      = 4,
-        GESTURE_PUSH            = 5,
-        in MSG:  -1 = none, 0 = waving, 1 = right fist, 2 = left fist
-        By experimentation:
-          Gesture 0:  Wave
-          Gesture 3:  Hand down (go)
-          Gesture 4:  Hand up, in stopping motion (stop)
-
-        */
-
         skeleton_data.gesture = -1; // No gesture
         person_data.gesture = -1; 
         for (int i = 0; i < userGestures_.size(); ++i)
@@ -1060,27 +959,22 @@ namespace nuitrack_body_tracker
       }
 
       ////////////////////////////////////////////////////
-      // Publish custom array message with position info for all people found
-      // body_tracking_array_pub_.publish(body_tracker_array_msg);
     }
 
 
     void onHandUpdate(HandTrackerData::Ptr handData)
     {
-    //   // std::cout << "Nuitrack: onHandUpdate callback" << std::endl;
     }
 
 
     void onNewGesture(GestureData::Ptr gestureData)
     {
-      //std::cout << "Nuitrack: onNewGesture callback" << std::endl;
 
       userGestures_ = gestureData->getGestures(); // Save for use in next skeleton frame
       for (int i = 0; i < userGestures_.size(); ++i)
       {
         printf("onNewGesture: Gesture Recognized %d for User %d\n", 
           userGestures_[i].type, userGestures_[i].userId);
-
       }
 
     }
@@ -1089,12 +983,6 @@ namespace nuitrack_body_tracker
     void PublishMarker(int id, float x, float y, float z, 
                        float color_r, float color_g, float color_b)
     {
-      // Display marker for RVIZ to show where robot thinks person is
-      // For Markers info, see http://wiki.ros.org/rviz/Tutorials/Markers%3A%20Basic%20Shapes
-
-      // ROS_INFO("DBG: PublishMarker called");
-      //if( id != 1)
-      // printf ("DBG PublishMarker called for %f, %f, %f\n", x,y,z);
 
       visualization_msgs::Marker marker;
       marker.header.frame_id = camera_depth_frame_;
@@ -1131,10 +1019,6 @@ namespace nuitrack_body_tracker
 
     }
 
-    // Publish 2D position of person, relative to camera
-    // useful for direct control of servo pan/tilt for tracking
-    // Example: publishJoint2D("JOINT_NECK", joints[JOINT_NECK]);
-
     void publishJoint2D(const char *name, const tdv::nuitrack::Joint& joint)
     {
       const float ASTRA_MINI_FOV_X =  1.047200; // (60 degrees horizontal)
@@ -1144,8 +1028,6 @@ namespace nuitrack_body_tracker
         return;  // ignore low confidence joints
       }
 
-      // Convert projection to radians
-      // proj is 0.0 (left) --> 1.0 (right)
       float radians_x = (joint.proj.x - 0.5) * ASTRA_MINI_FOV_X;
       float radians_y = (joint.proj.y - 0.5) * ASTRA_MINI_FOV_Y;
       std::cout << std::setprecision(4) << std::setw(7) 
@@ -1375,6 +1257,9 @@ namespace nuitrack_body_tracker
     tdv::nuitrack::HandTracker::Ptr handTracker_;
     tdv::nuitrack::GestureRecognizer::Ptr gestureRecognizer_;
     //tdv::nuitrack::getInstancesJson::Ptr getInstancesJson;
+    int waist_set = 0;
+    std::vector<double> pre_waist_position;
+    std::vector<double> waist_position;
 
 
     /* Note from http://download.3divi.com/Nuitrack/doc/Instance_based_API.html
