@@ -197,7 +197,6 @@ namespace nuitrack_body_tracker
               if (min_dist > dist)
               {
                 //もしもmin_distよりも比較位置が短いならば、その腰座標を持つ人を前フレームで認識した人として扱う。
-                pre_waist_position = {pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y};
                 min_dist = dist;
                 identify_point_w = pre_skeleton.id;
               }
@@ -444,6 +443,7 @@ namespace nuitrack_body_tracker
           //腰の吹っ飛びがなければ腰の移動位置が最も少なかったidを優先する
           else
           {
+            pre_waist_position = {pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y};
             identify_point = identify_point_w;
           }
           /*
