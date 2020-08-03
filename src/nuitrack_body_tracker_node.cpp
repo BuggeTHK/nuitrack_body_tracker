@@ -199,8 +199,9 @@ namespace nuitrack_body_tracker
                 //もしもmin_distよりも比較位置が短いならば、その腰座標を持つ人を前フレームで認識した人として扱う。
                 min_dist = dist;
                 identify_point_w = pre_skeleton.id;
+                tmp_waist_position = {pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y};
               }
-              printf("ID：%dの位置は{%f,%f}、移動距離は%fで、現最小移動位置は{%f,%f}、距離は%f、IDは%dで、waist_setは%dです\n", pre_skeleton.id, pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y, dist, pre_waist_position[0], pre_waist_position[1], min_dist, identify_point_w, waist_set);
+              printf("ID：%dの位置は{%f,%f}、移動距離は%fで、前フレームの位置は{%f,%f}、現最小距離は%f、IDは%dで、waist_setは%dです\n", pre_skeleton.id, pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y, dist, pre_waist_position[0], pre_waist_position[1], min_dist, identify_point_w, waist_set);
             }
             waist_set = 0;
           }
@@ -212,6 +213,7 @@ namespace nuitrack_body_tracker
           //（なお、最初の認識では必ずこれが呼ばれる）
           if (min_dist > 0.5 && waist_set == 0)
           {
+            std::cout<<"###########################################################"<<std::endl;
             if (pre_skeleton.joints[JOINT_HEAD].confidence > conf)
             {
               if (min_num == -1000.0f)
@@ -426,6 +428,7 @@ namespace nuitrack_body_tracker
             {
               minimum = min_num;
               identify_point_d = pre_skeleton.id;
+              tmp_waist_position = {pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y};
             }
             else
             {
@@ -433,18 +436,21 @@ namespace nuitrack_body_tracker
               {
                 minimum = min_num;
                 identify_point_d = pre_skeleton.id;
+                tmp_waist_position = {pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y};
               }
             }
             identify_point = identify_point_d;
-            pre_waist_position = {pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y};
+            pre_waist_position = tmp_waist_position;
             waist_set = 1;
             //printf("ID：%dの最小値は%fで、現最小値は%f、IDは%dです\n",pre_skeleton.id,min_num,minimum,identify_point_d);
           }
           //腰の吹っ飛びがなければ腰の移動位置が最も少なかったidを優先する
           else
           {
-            pre_waist_position = {pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y};
+            pre_waist_position = tmp_waist_position;
+            printf("結局、初期腰はID：%dで、座標位置(%f, %f)です\n",identify_point_w,pre_waist_position[0],pre_waist_position[1]);
             identify_point = identify_point_w;
+            waist_set = 1;
           }
           /*
           //カメラに最も近い座標を算出し、waist_set==0の場合
@@ -1395,6 +1401,7 @@ namespace nuitrack_body_tracker
     float confidence_value;
     int waist_set = 0;
     std::vector<double> pre_waist_position;
+    std::vector<double> tmp_waist_position;
 
     /* Note from http://download.3divi.com/Nuitrack/doc/Instance_based_API.html
     Face modules are by default disabled. To enable face modules, open nuitrack.config file and set Faces.ToUse and DepthProvider.Depth2ColorRegistration to true.
