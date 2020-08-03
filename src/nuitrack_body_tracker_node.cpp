@@ -201,7 +201,7 @@ namespace nuitrack_body_tracker
                 identify_point_w = pre_skeleton.id;
                 tmp_waist_position = {pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y};
               }
-              printf("ID：%dの位置は{%f,%f}、移動距離は%fで、前フレームの位置は{%f,%f}、現最小距離は%f、IDは%dで、waist_setは%dです\n", pre_skeleton.id, pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y, dist, pre_waist_position[0], pre_waist_position[1], min_dist, identify_point_w, waist_set);
+              //printf("ID：%dの位置は{%f,%f}、移動距離は%fで、前フレームの位置は{%f,%f}、現最小距離は%f、IDは%dで、waist_setは%dです\n", pre_skeleton.id, pre_skeleton.joints[JOINT_WAIST].proj.x, pre_skeleton.joints[JOINT_WAIST].proj.y, dist, pre_waist_position[0], pre_waist_position[1], min_dist, identify_point_w, waist_set);
             }
             waist_set = 0;
           }
@@ -213,7 +213,6 @@ namespace nuitrack_body_tracker
           //（なお、最初の認識では必ずこれが呼ばれる）
           if (min_dist > 0.5 && waist_set == 0)
           {
-            std::cout<<"###########################################################"<<std::endl;
             if (pre_skeleton.joints[JOINT_HEAD].confidence > conf)
             {
               if (min_num == -1000.0f)
@@ -448,7 +447,7 @@ namespace nuitrack_body_tracker
           else
           {
             pre_waist_position = tmp_waist_position;
-            printf("結局、初期腰はID：%dで、座標位置(%f, %f)です\n",identify_point_w,pre_waist_position[0],pre_waist_position[1]);
+            //printf("結局、初期腰はID：%dで、座標位置(%f, %f)です\n",identify_point_w,pre_waist_position[0],pre_waist_position[1]);
             identify_point = identify_point_w;
             waist_set = 1;
           }
