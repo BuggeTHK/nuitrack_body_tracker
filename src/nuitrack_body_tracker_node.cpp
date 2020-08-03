@@ -1409,7 +1409,6 @@ int main(int argc, char *argv[])
   ros::init(argc, argv, "nuitrack_body_tracker");
   nuitrack_body_tracker_node node(ros::this_node::getName());
   node.Init("");
-  std::cout << "######## RUUUUUUUN ###########" << std::endl;
   node.Run();
 
   return 0;
