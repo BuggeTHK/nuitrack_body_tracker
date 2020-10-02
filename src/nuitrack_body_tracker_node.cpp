@@ -79,6 +79,18 @@ namespace nuitrack_body_tracker
 
     ~nuitrack_body_tracker_node()
     {
+        // Release Nuitrack
+              try
+              {
+                tdv::nuitrack::Nuitrack::release();
+                std::cout << "========= Nuitrack: RELEASE COMPLETED =========" << std::endl;
+
+              }
+              catch (const tdv::nuitrack::Exception &e)
+              {
+                std::cerr << "Nuitrack release failed (ExceptionType: "
+                          << e.type() << ")" << std::endl;
+              }
       ROS_INFO("nuitrack_body_tracker_node shutting down");
     }
 
