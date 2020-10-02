@@ -147,9 +147,6 @@ namespace nuitrack_body_tracker
     {
     }
 
-    void onUserUpdate(tdv::nuitrack::UserFrame::Ptr frame)
-    {
-    }
 
     void onSkeletonUpdate(SkeletonData::Ptr userSkeletons)
     {
@@ -1100,21 +1097,6 @@ namespace nuitrack_body_tracker
       ////////////////////////////////////////////////////
     }
 
-    void onHandUpdate(HandTrackerData::Ptr handData)
-    {
-    }
-
-    void onNewGesture(GestureData::Ptr gestureData)
-    {
-
-      userGestures_ = gestureData->getGestures(); // Save for use in next skeleton frame
-      for (int i = 0; i < userGestures_.size(); ++i)
-      {
-        printf("onNewGesture: Gesture Recognized %d for User %d\n",
-               userGestures_[i].type, userGestures_[i].userId);
-      }
-    }
-
     void PublishMarker(int id, float x, float y, float z,
                        float color_r, float color_g, float color_b)
     {
@@ -1213,12 +1195,9 @@ namespace nuitrack_body_tracker
       Nuitrack::setConfigValue("Realsense2Module.RGB.ProcessHeight", "480");
       Nuitrack::setConfigValue("Realsense2Module.RGB.FPS", "60");
 
-      // Enable face tracking
-      Nuitrack::setConfigValue("Faces.ToUse", "true");
+      // Enable face tracking()
+      Nuitrack::setConfigValue("Faces.ToUse", "false");
 
-      //Options for debug
-      //Nuitrack::setConfigValue("Skeletonization.ActiveUsers", "1");
-      //Nuitrack::setConfigValue("DepthProvider.Mirror", "true");
       depth_frame_number_ = 0;
       color_frame_number_ = 0;
 
@@ -1263,38 +1242,23 @@ namespace nuitrack_body_tracker
       modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
       modifier.resize(numpoints);
 
-      std::cout << "Nuitrack: UserTracker::create()" << std::endl;
-      userTracker_ = tdv::nuitrack::UserTracker::create();
-      // Bind to event update user tracker
-      userTracker_->connectOnUpdate(std::bind(
-          &nuitrack_body_tracker_node::onUserUpdate, this, std::placeholders::_1));
-
       std::cout << "Nuitrack: SkeletonTracker::create()" << std::endl;
       skeletonTracker_ = tdv::nuitrack::SkeletonTracker::create();
       // Bind to event update skeleton tracker
       skeletonTracker_->connectOnUpdate(std::bind(
           &nuitrack_body_tracker_node::onSkeletonUpdate, this, std::placeholders::_1));
 
-      std::cout << "Nuitrack: HandTracker::create()" << std::endl;
-      handTracker_ = tdv::nuitrack::HandTracker::create();
-      // Bind to event update Hand tracker
-      handTracker_->connectOnUpdate(std::bind(
-          &nuitrack_body_tracker_node::onHandUpdate, this, std::placeholders::_1));
-
-      std::cout << "Nuitrack: GestureRecognizer::create()" << std::endl;
-      gestureRecognizer_ = tdv::nuitrack::GestureRecognizer::create();
-      gestureRecognizer_->connectOnNewGestures(std::bind(
-          &nuitrack_body_tracker_node::onNewGesture, this, std::placeholders::_1));
-
       ROS_INFO("%s: Init complete.  Waiting for frames...", _name.c_str());
     }
 
     void Run()
     {
+
       // Initialize Nuitrack first, then create Nuitrack modules
       ROS_INFO("%s: Running...", _name.c_str());
       // std::cout << "Nuitrack: Running..." << std::endl;
       // Start Nuitrack
+
       try
       {
         tdv::nuitrack::Nuitrack::run();
@@ -1310,6 +1274,10 @@ namespace nuitrack_body_tracker
 
       // Run Loop
       ros::Rate r(30); // hz
+
+      //while(true){r.sleep();}
+      //while文が入るとメモリが増える？
+
       while (ros::ok())
       {
         // std::cout << "Nuitrack: Looping..." << std::endl;
@@ -1332,14 +1300,18 @@ namespace nuitrack_body_tracker
         }
 
         // std::cout << "Nuitrack: Sleeping..." << std::endl;
+
         ros::spinOnce();
         r.sleep();
+
       }
 
       // Release Nuitrack
       try
       {
         tdv::nuitrack::Nuitrack::release();
+        std::cout << "========= Nuitrack: RELEASE COMPLETED =========" << std::endl;
+
       }
       catch (const tdv::nuitrack::Exception &e)
       {
